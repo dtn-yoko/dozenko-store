@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dozenko — Artisan Flower Rugs | Handcrafted Luxury for Your Home</title>
+  <meta name="description" content="Discover Dozenko's handcrafted floral rugs. Ultra-soft cotton pile, non-slip backing, stunning flower designs. Size 50×120cm. From $25. Ships worldwide." />
+  <meta property="og:title" content="Dozenko — Artisan Flower Rugs 🌸" />
+  <meta property="og:description" content="Handcrafted floral rugs that transform every room. Ultra-soft, non-slip, pet-friendly. Shop from $25." />
+  <meta property="og:image" content="rug-blue.jpg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===== ANNOUNCEMENT BAR ===== -->
+  <div class="announce-bar" id="announce-bar">
+    <div class="announce-inner">
+      <span>🔥 LIMITED STOCK — Only 15 rugs left at this price!</span>
+      <span class="announce-sep">|</span>
+      <span>⚡ Buy 2+ Get FREE Priority Shipping</span>
+      <span class="announce-sep">|</span>
+      <span>🌸 4 Colors Available Now</span>
+    </div>
+  </div>
+
+  <!-- ===== NAVBAR ===== -->
+  <header class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="#" class="nav-logo" id="nav-logo-link">
+        <span class="logo-icon">✿</span>
+        <span class="logo-text">Dozenko</span>
+      </a>
+      <nav class="nav-links" id="nav-links">
+        <a href="#products" class="nav-link" id="nav-products">Products</a>
+        <a href="#rooms" class="nav-link" id="nav-rooms">Use Cases</a>
+        <a href="#features" class="nav-link" id="nav-features">Quality</a>
+        <a href="#reviews" class="nav-link" id="nav-reviews">Reviews</a>
+        <a href="#pricing" class="nav-link" id="nav-pricing">Pricing</a>
+        <a href="#consult" class="nav-link" id="nav-consult">Tư Vấn 🌸</a>
+        <a href="#order" class="nav-link nav-cta" id="nav-order">Order Now</a>
+      </nav>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero" id="hero">
+    <div class="hero-bg-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+    </div>
+    <div class="hero-container">
+      <div class="hero-content">
+        <div class="hero-badge">✦ Handcrafted Collection 2025</div>
+        <h1 class="hero-title">
+          Where Art<br />
+          <em>Meets</em> Your Floor
+        </h1>
+        <p class="hero-subtitle">
+          Artisan flower rugs hand-tufted with premium cotton blend. 
+          Each piece is a living painting beneath your feet — 
+          soft, thick, and unmistakably beautiful.
+        </p>
+        <div class="hero-size-badge">
+          <span class="size-icon">📐</span>
+          50 cm × 120 cm — Perfect Runner Size
+        </div>
+        <div class="hero-actions">
+          <a href="#order" class="btn btn-primary" id="hero-shop-btn">
+            Order Now — From $25
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#products" class="btn btn-ghost" id="hero-price-btn">View Colors</a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat">
+            <span class="stat-num">500+</span>
+            <span class="stat-label">Happy Customers</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat">
+            <span class="stat-num">4.9 ⭐</span>
+            <span class="stat-label">Average Rating</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat">
+            <span class="stat-num">100%</span>
+            <span class="stat-label">Handcrafted</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-img-wrapper">
+          <img src="images/rug-blue.jpg" alt="Blue Flower Rug — Dozenko Artisan Collection" class="hero-img" id="hero-main-img" />
+          <!-- Animated flower canvas overlay -->
+          <canvas id="flower-canvas" class="flower-canvas-overlay" aria-hidden="true"></canvas>
+          <div class="hero-img-glow"></div>
+          <div class="floating-tag floating-tag-1">
+            <span class="tag-icon">⭐</span> Premium Quality
+          </div>
+          <div class="floating-tag floating-tag-2">
+            <span class="tag-icon">🌸</span> Flower Design
+          </div>
+          <div class="floating-tag floating-tag-3">
+            <span class="tag-icon">🐾</span> Pet Friendly
+          </div>
+        </div>
+        <div class="color-dots">
+          <button class="color-dot dot-blue active" id="dot-blue" onclick="switchHeroColor('blue','dot-blue')" aria-label="Blue colorway" title="Ocean Blue"></button>
+          <button class="color-dot dot-green" id="dot-green" onclick="switchHeroColor('green','dot-green')" aria-label="Green colorway" title="Forest Green"></button>
+          <button class="color-dot dot-orange" id="dot-orange" onclick="switchHeroColor('orange','dot-orange')" aria-label="Orange colorway" title="Caramel Sunset"></button>
+          <button class="color-dot dot-brown" id="dot-brown" onclick="switchHeroColor('brown','dot-brown')" aria-label="Brown colorway" title="Warm Brown"></button>
+        </div>
+      </div>
+    </div>
+    <div class="hero-scroll-hint">
+      <span>Scroll to explore</span>
+      <div class="scroll-arrow"></div>
+    </div>
+  </section>
+
+  <!-- ===== TRUST BADGES ===== -->
+  <section class="trust-bar" id="trust-bar">
+    <div class="trust-container">
+      <div class="trust-item">
+        <span class="trust-icon">🚚</span>
+        <div><strong>Fast Shipping</strong><span>Worldwide delivery</span></div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">🔒</span>
+        <div><strong>Secure Payment</strong><span>100% protected</span></div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">🌸</span>
+        <div><strong>Premium Cotton</strong><span>Ultra-soft pile</span></div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">🐾</span>
+        <div><strong>Pet Friendly</strong><span>Safe for all family</span></div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">✨</span>
+        <div><strong>Easy to Clean</strong><span>Machine washable</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== GIF / LIFESTYLE BANNER ===== -->
+  <section class="lifestyle-banner" id="lifestyle-banner">
+    <div class="section-container">
+      <div class="lifestyle-grid">
+        <div class="lifestyle-text">
+          <span class="section-tag">More Than a Rug</span>
+          <h2 class="section-title">A Statement Piece That <em>Breathes Life</em> Into Any Room</h2>
+          <p class="lifestyle-desc">
+            Our hand-tufted floral rugs aren't just floor coverings — they're art. 
+            With three blooming flowers on a plush cream canvas, each rug instantly 
+            elevates your space from ordinary to extraordinary.
+          </p>
+          <ul class="lifestyle-points">
+            <li><span class="lp-icon">✦</span> Thick 3cm pile — feels like walking on clouds</li>
+            <li><span class="lp-icon">✦</span> Premium cotton blend — soft, durable, allergy-friendly</li>
+            <li><span class="lp-icon">✦</span> Vibrant colors that stay rich after every wash</li>
+            <li><span class="lp-icon">✦</span> Unique petal shape — a true conversation starter</li>
+          </ul>
+          <a href="#order" class="btn btn-primary" id="lifestyle-cta">Get Yours Today</a>
+        </div>
+        <div class="lifestyle-visual">
+          <div class="gif-frame" id="gif-frame">
+            <div class="gif-carousel" id="gif-carousel">
+              <img src="images/rug-blue.jpg" alt="Ocean Blue rug in bedroom" class="gif-slide active" />
+              <img src="images/rug-green.jpg" alt="Forest Green rug in living room" class="gif-slide" />
+              <img src="images/rug-orange.jpg" alt="Caramel rug in hallway" class="gif-slide" />
+              <img src="images/rug-brown.jpg" alt="Brown rug in bathroom" class="gif-slide" />
+            </div>
+            <div class="gif-dots" id="gif-dots">
+              <span class="gif-dot active" onclick="goToSlide(0)"></span>
+              <span class="gif-dot" onclick="goToSlide(1)"></span>
+              <span class="gif-dot" onclick="goToSlide(2)"></span>
+              <span class="gif-dot" onclick="goToSlide(3)"></span>
+            </div>
+            <div class="gif-badge">
+              <span class="pulse-dot"></span>
+              Live Slideshow
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PRODUCTS ===== -->
+  <section class="products" id="products">
+    <div class="section-container">
+      <div class="section-header">
+        <span class="section-tag">Our Collection</span>
+        <h2 class="section-title">Choose Your Colorway</h2>
+        <p class="section-desc">
+          Each rug features three blooming flowers in a unique color palette, 
+          hand-tufted on a plush cream base. Mix colors in bundle orders!
+        </p>
+      </div>
+      <div class="products-grid">
+
+        <div class="product-card reveal" id="product-blue">
+          <div class="product-img-wrap">
+            <img src="rug-blue.jpg" alt="Ocean Blue Flower Rug" class="product-img" loading="lazy" />
+            <div class="product-overlay">
+              <a href="#order" class="overlay-btn" id="overlay-btn-blue">Order This Color</a>
+            </div>
+            <div class="product-badge">Bestseller</div>
+          </div>
+          <div class="product-info">
+            <div class="product-color-swatch swatch-blue"></div>
+            <h3 class="product-name">Ocean Blue</h3>
+            <p class="product-desc">Deep navy & powder blue petals with a cream center — serene and elegant.</p>
+            <div class="product-price-row">
+              <span class="product-price">From $25</span>
+              <a href="#order" class="product-order-btn" id="order-btn-blue">Order →</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card reveal reveal-delay-1" id="product-green">
+          <div class="product-img-wrap">
+            <img src="rug-green.jpg" alt="Forest Green Flower Rug" class="product-img" loading="lazy" />
+            <div class="product-overlay">
+              <a href="#order" class="overlay-btn" id="overlay-btn-green">Order This Color</a>
+            </div>
+            <div class="product-badge product-badge-green">Fresh Pick</div>
+          </div>
+          <div class="product-info">
+            <div class="product-color-swatch swatch-green"></div>
+            <h3 class="product-name">Forest Green</h3>
+            <p class="product-desc">Lush green petals with golden-yellow centers — fresh and nature-inspired.</p>
+            <div class="product-price-row">
+              <span class="product-price">From $25</span>
+              <a href="#order" class="product-order-btn" id="order-btn-green">Order →</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card reveal reveal-delay-2" id="product-orange">
+          <div class="product-img-wrap">
+            <img src="rug-orange.jpg" alt="Caramel Sunset Flower Rug" class="product-img" loading="lazy" />
+            <div class="product-overlay">
+              <a href="#order" class="overlay-btn" id="overlay-btn-orange">Order This Color</a>
+            </div>
+          </div>
+          <div class="product-info">
+            <div class="product-color-swatch swatch-orange"></div>
+            <h3 class="product-name">Caramel Sunset</h3>
+            <p class="product-desc">Warm terracotta & golden yellow blooms — cozy and vibrant energy.</p>
+            <div class="product-price-row">
+              <span class="product-price">From $25</span>
+              <a href="#order" class="product-order-btn" id="order-btn-orange">Order →</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card reveal reveal-delay-3" id="product-brown">
+          <div class="product-img-wrap">
+            <img src="rug-brown.jpg" alt="Warm Brown Flower Rug" class="product-img" loading="lazy" />
+            <div class="product-overlay">
+              <a href="#order" class="overlay-btn" id="overlay-btn-brown">Order This Color</a>
+            </div>
+          </div>
+          <div class="product-info">
+            <div class="product-color-swatch swatch-brown"></div>
+            <h3 class="product-name">Warm Brown</h3>
+            <p class="product-desc">Rich chocolate & cream petals — timeless, sophisticated earthiness.</p>
+            <div class="product-price-row">
+              <span class="product-price">From $25</span>
+              <a href="#order" class="product-order-btn" id="order-btn-brown">Order →</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ROOMS / USE CASES ===== -->
+  <section class="rooms" id="rooms">
+    <div class="section-container">
+      <div class="section-header">
+        <span class="section-tag">Perfect For Every Space</span>
+        <h2 class="section-title">Transforms Every Corner of Your Home</h2>
+        <p class="section-desc">From cozy bedrooms to playful pet areas — our rugs fit beautifully anywhere.</p>
+      </div>
+      <div class="rooms-grid">
+        <div class="room-card reveal" id="room-bedroom">
+          <div class="room-icon-wrap">
+            <span class="room-icon">🛏️</span>
+          </div>
+          <h3 class="room-name">Bedroom</h3>
+          <p class="room-desc">Wake up to soft petals underfoot. The perfect bedside companion that turns your morning routine into a luxury experience.</p>
+          <div class="room-tip">💡 Best color: Ocean Blue or Warm Brown</div>
+        </div>
+        <div class="room-card reveal reveal-delay-1" id="room-living">
+          <div class="room-icon-wrap">
+            <span class="room-icon">🛋️</span>
+          </div>
+          <h3 class="room-name">Living Room</h3>
+          <p class="room-desc">Add a stunning focal point beside the sofa. Guests will immediately ask "Where did you get that beautiful rug?"</p>
+          <div class="room-tip">💡 Best color: Forest Green or Caramel Sunset</div>
+        </div>
+        <div class="room-card reveal reveal-delay-2" id="room-bathroom">
+          <div class="room-icon-wrap">
+            <span class="room-icon">🚿</span>
+          </div>
+          <h3 class="room-name">Bathroom</h3>
+          <p class="room-desc">Step out of the shower onto something beautiful. Non-slip backing keeps it safe; thick pile keeps it cozy.</p>
+          <div class="room-tip">💡 Best color: Ocean Blue or Forest Green</div>
+        </div>
+        <div class="room-card reveal reveal-delay-3" id="room-hallway">
+          <div class="room-icon-wrap">
+            <span class="room-icon">🚪</span>
+          </div>
+          <h3 class="room-name">Hallway / Entryway</h3>
+          <p class="room-desc">Make a stunning first impression. The 50×120cm runner size is tailor-made for welcoming guests in style.</p>
+          <div class="room-tip">💡 Best color: Any — they all impress!</div>
+        </div>
+        <div class="room-card reveal reveal-delay-1" id="room-kids">
+          <div class="room-icon-wrap">
+            <span class="room-icon">🧸</span>
+          </div>
+          <h3 class="room-name">Kids' Room</h3>
+          <p class="room-desc">Children love the soft, plush surface for playing. The vibrant floral design sparks creativity and joy.</p>
+          <div class="room-tip">💡 Best color: Forest Green or Caramel Sunset</div>
+        </div>
+        <div class="room-card reveal reveal-delay-2" id="room-pet">
+          <div class="room-icon-wrap pet-icon-wrap">
+            <span class="room-icon">🐾</span>
+          </div>
+          <h3 class="room-name">Pet Corner</h3>
+          <p class="room-desc">Your furry friends deserve luxury too! The thick cotton pile is gentle on paws, and the non-slip base stays put even with playful pets.</p>
+          <div class="room-tip">💡 Best color: Warm Brown — hides fur easily!</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== MATERIAL / FEATURES ===== -->
+  <section class="features" id="features">
+    <div class="section-container">
+      <div class="section-header light">
+        <span class="section-tag">Premium Quality</span>
+        <h2 class="section-title">Crafted to Last, Designed to Impress</h2>
+        <p class="section-desc" style="color:rgba(255,255,255,0.7)">Every detail is thoughtfully designed for maximum comfort and beauty.</p>
+      </div>
+
+      <!-- Material Highlight -->
+      <div class="material-highlight">
+        <div class="material-card" id="mat-1">
+          <div class="mat-icon">🌿</div>
+          <div class="mat-info">
+            <h4>Premium Cotton Blend</h4>
+            <p>Ultra-soft, hypoallergenic fibers — gentle on skin and paws</p>
+            <div class="mat-bar"><div class="mat-bar-fill" style="width:95%"></div></div>
+            <span class="mat-label">Softness: 95/100</span>
+          </div>
+        </div>
+        <div class="material-card" id="mat-2">
+          <div class="mat-icon">📏</div>
+          <div class="mat-info">
+            <h4>3cm Thick Pile</h4>
+            <p>Luxuriously dense — like stepping onto a cloud every single day</p>
+            <div class="mat-bar"><div class="mat-bar-fill" style="width:98%"></div></div>
+            <span class="mat-label">Thickness: 3cm pile</span>
+          </div>
+        </div>
+        <div class="material-card" id="mat-3">
+          <div class="mat-icon">🛡️</div>
+          <div class="mat-info">
+            <h4>Non-Slip Rubber Backing</h4>
+            <p>Stays firmly in place on any floor — safe for children & elderly</p>
+            <div class="mat-bar"><div class="mat-bar-fill" style="width:100%"></div></div>
+            <span class="mat-label">Safety: Maximum grip</span>
+          </div>
+        </div>
+        <div class="material-card" id="mat-4">
+          <div class="mat-icon">🫧</div>
+          <div class="mat-info">
+            <h4>Machine Washable</h4>
+            <p>Easy spot-clean or gentle wash — colors stay vibrant wash after wash</p>
+            <div class="mat-bar"><div class="mat-bar-fill" style="width:90%"></div></div>
+            <span class="mat-label">Durability: 90+ washes</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card reveal" id="feature-1">
+          <div class="feature-icon">🌸</div>
+          <h3 class="feature-title">Hand-Tufted Art</h3>
+          <p class="feature-text">Each rug is individually crafted by skilled artisans. The 3D petal effect cannot be replicated by machines.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-1" id="feature-2">
+          <div class="feature-icon">☁️</div>
+          <h3 class="feature-title">Ultra-Soft Pile</h3>
+          <p class="feature-text">Premium cotton blend fibers feel incredibly soft underfoot — like stepping onto a cloud every morning.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-2" id="feature-3">
+          <div class="feature-icon">📐</div>
+          <h3 class="feature-title">Perfect Runner Size</h3>
+          <p class="feature-text">50 × 120 cm — ideal for bedside, hallway, bathroom, or living room accent placement.</p>
+        </div>
+        <div class="feature-card reveal" id="feature-4">
+          <div class="feature-icon">🛡️</div>
+          <h3 class="feature-title">Non-Slip Backing</h3>
+          <p class="feature-text">Secure rubber backing keeps the rug firmly in place on any floor surface — safe for the whole family.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-1" id="feature-5">
+          <div class="feature-icon">✨</div>
+          <h3 class="feature-title">Easy to Clean</h3>
+          <p class="feature-text">Spot-clean or gentle machine wash. Colors stay vibrant wash after wash without fading.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-2" id="feature-6">
+          <div class="feature-icon">📦</div>
+          <h3 class="feature-title">Safe Packaging</h3>
+          <p class="feature-text">Every rug is carefully rolled and packaged to arrive in perfect condition, ready to beautify your home.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== REVIEWS ===== -->
+  <section class="reviews" id="reviews">
+    <div class="section-container">
+      <div class="section-header">
+        <span class="section-tag">Customer Love</span>
+        <h2 class="section-title">What Our Customers Say</h2>
+        <div class="reviews-summary">
+          <div class="review-stars">⭐⭐⭐⭐⭐</div>
+          <span class="review-avg">4.9 / 5</span>
+          <span class="review-count">Based on 500+ reviews</span>
+        </div>
+      </div>
+      <div class="reviews-grid">
+
+        <div class="review-card reveal" id="review-1">
+          <div class="review-header">
+            <div class="reviewer-avatar" style="background: linear-gradient(135deg,#4A7BC8,#2A4E7C)">S</div>
+            <div class="reviewer-info">
+              <strong>Sarah M.</strong>
+              <span>New York, USA</span>
+            </div>
+            <div class="review-rating">⭐⭐⭐⭐⭐</div>
+          </div>
+          <p class="review-text">"This rug completely transformed my bedroom! The blue flower design is even more beautiful in person. My cat absolutely loves laying on it — the cotton pile is SO soft. Worth every penny!"</p>
+          <div class="review-product"><span class="rp-badge">✓ Verified Purchase</span> Ocean Blue · 1 piece</div>
+        </div>
+
+        <div class="review-card reveal reveal-delay-1" id="review-2">
+          <div class="review-header">
+            <div class="reviewer-avatar" style="background: linear-gradient(135deg,#5A9E5A,#3A6B3A)">E</div>
+            <div class="reviewer-info">
+              <strong>Emma L.</strong>
+              <span>London, UK</span>
+            </div>
+            <div class="review-rating">⭐⭐⭐⭐⭐</div>
+          </div>
+          <p class="review-text">"Ordered 2 rugs — one green for the bathroom, one blue for my daughter's room. The non-slip backing is excellent. My toddler plays on it daily and it still looks brand new after 3 months!"</p>
+          <div class="review-product"><span class="rp-badge">✓ Verified Purchase</span> Forest Green + Ocean Blue · 2 pieces</div>
+        </div>
+
+        <div class="review-card reveal reveal-delay-2" id="review-3">
+          <div class="review-header">
+            <div class="reviewer-avatar" style="background: linear-gradient(135deg,#C8622A,#7C3A2A)">M</div>
+            <div class="reviewer-info">
+              <strong>Maria T.</strong>
+              <span>Melbourne, Australia</span>
+            </div>
+            <div class="review-rating">⭐⭐⭐⭐⭐</div>
+          </div>
+          <p class="review-text">"I bought all 3 colors for my home and they look STUNNING. The caramel one in my entryway gets compliments from every guest. The quality is premium — thick, dense pile that feels luxurious."</p>
+          <div class="review-product"><span class="rp-badge">✓ Verified Purchase</span> All 3 colors · Bundle deal</div>
+        </div>
+
+        <div class="review-card reveal" id="review-4">
+          <div class="review-header">
+            <div class="reviewer-avatar" style="background: linear-gradient(135deg,#7C3A2A,#4A3F38)">J</div>
+            <div class="reviewer-info">
+              <strong>James K.</strong>
+              <span>Toronto, Canada</span>
+            </div>
+            <div class="review-rating">⭐⭐⭐⭐⭐</div>
+          </div>
+          <p class="review-text">"Bought the brown rug for my dog's corner and he's obsessed with it! Easy to clean — just a quick shake and it's fresh. The colors haven't faded even after multiple washes. 10/10!"</p>
+          <div class="review-product"><span class="rp-badge">✓ Verified Purchase</span> Warm Brown · 1 piece</div>
+        </div>
+
+        <div class="review-card reveal reveal-delay-1" id="review-5">
+          <div class="review-header">
+            <div class="reviewer-avatar" style="background: linear-gradient(135deg,#C8906A,#C8622A)">A</div>
+            <div class="reviewer-info">
+              <strong>Aisha R.</strong>
+              <span>Dubai, UAE</span>
+            </div>
+            <div class="review-rating">⭐⭐⭐⭐⭐</div>
+          </div>
+          <p class="review-text">"The packaging was beautiful and the rug arrived in perfect condition. The flower design is 3D — you can really feel the individual petals! My living room looks like a magazine photo now."</p>
+          <div class="review-product"><span class="rp-badge">✓ Verified Purchase</span> Caramel Sunset · 2 pieces</div>
+        </div>
+
+        <div class="review-card reveal reveal-delay-2" id="review-6">
+          <div class="review-header">
+            <div class="reviewer-avatar" style="background: linear-gradient(135deg,#4A7BC8,#5A9E5A)">L</div>
+            <div class="reviewer-info">
+              <strong>Lily C.</strong>
+              <span>Singapore</span>
+            </div>
+            <div class="review-rating">⭐⭐⭐⭐⭐</div>
+          </div>
+          <p class="review-text">"Fast shipping, beautiful product! The green rug in my bathroom makes me smile every morning. It's the little things that make a home feel special. Already ordered a second one!"</p>
+          <div class="review-product"><span class="rp-badge">✓ Verified Purchase</span> Forest Green · 2 pieces</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PRICING ===== -->
+  <section class="pricing" id="pricing">
+    <div class="section-container">
+      <div class="section-header">
+        <span class="section-tag">Special Deals</span>
+        <h2 class="section-title">Simple, Honest Pricing</h2>
+        <p class="section-desc">Buy more, save more. Mix any colors in bundle orders!</p>
+      </div>
+      <!-- Urgency bar -->
+      <div class="urgency-bar" id="urgency-bar">
+        <span class="urgency-pulse"></span>
+        🔥 <strong>Flash Sale Active</strong> — Stock is running low! <span id="stock-count">Only 15 left</span> at these prices.
+      </div>
+      <div class="pricing-grid">
+
+        <div class="pricing-card reveal" id="pricing-1">
+          <div class="pricing-qty">1 Piece</div>
+          <div class="pricing-price">
+            <span class="price-dollar">$</span>
+            <span class="price-num">25</span>
+          </div>
+          <div class="pricing-per">per rug</div>
+          <ul class="pricing-features">
+            <li>✓ Any 1 color of your choice</li>
+            <li>✓ Size: 50 × 120 cm</li>
+            <li>✓ Hand-tufted premium quality</li>
+            <li>✓ Non-slip backing included</li>
+            <li>✓ Cotton blend ultra-soft pile</li>
+          </ul>
+          <a href="#order" class="btn btn-outline-dark" id="pricing-order-1" onclick="setOrderQty(1)">Order 1 Piece</a>
+        </div>
+
+        <div class="pricing-card pricing-popular reveal reveal-delay-1" id="pricing-2">
+          <div class="pricing-popular-badge">🔥 Most Popular — Save $11</div>
+          <div class="pricing-qty">2 Pieces</div>
+          <div class="pricing-price">
+            <span class="price-dollar">$</span>
+            <span class="price-num">39</span>
+          </div>
+          <div class="pricing-per">only $19.50 each</div>
+          <ul class="pricing-features">
+            <li>✓ Mix any 2 colors</li>
+            <li>✓ Size: 50 × 120 cm each</li>
+            <li>✓ Hand-tufted premium quality</li>
+            <li>✓ Non-slip backing included</li>
+            <li>✓ <strong>Free Priority Shipping</strong></li>
+          </ul>
+          <a href="#order" class="btn btn-primary" id="pricing-order-2" onclick="setOrderQty(2)">Order 2 Pieces</a>
+        </div>
+
+        <div class="pricing-card reveal reveal-delay-2" id="pricing-3">
+          <div class="pricing-qty">3 Pieces</div>
+          <div class="pricing-price">
+            <span class="price-dollar">$</span>
+            <span class="price-num">55</span>
+          </div>
+          <div class="pricing-per">only $18.33 each — save $20!</div>
+          <ul class="pricing-features">
+            <li>✓ Mix any 3 colors</li>
+            <li>✓ Size: 50 × 120 cm each</li>
+            <li>✓ Hand-tufted premium quality</li>
+            <li>✓ Non-slip backing included</li>
+            <li>✓ <strong>Free Priority Shipping</strong></li>
+            <li>✓ <strong>Best value deal</strong></li>
+          </ul>
+          <a href="#order" class="btn btn-outline-dark" id="pricing-order-3" onclick="setOrderQty(3)">Order 3 Pieces</a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FAQ ===== -->
+  <section class="faq-section" id="faq">
+    <div class="section-container">
+      <div class="section-header">
+        <span class="section-tag">FAQ</span>
+        <h2 class="section-title">Frequently Asked Questions</h2>
+      </div>
+      <div class="faq-list" id="faq-list">
+
+        <div class="faq-item" id="faq-1">
+          <button class="faq-question" onclick="toggleFaq('faq-1')">
+            What is the rug made of?
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>Our rugs are made from a premium cotton blend with a thick 3cm pile depth. The fibers are hypoallergenic, ultra-soft, and gentle on sensitive skin — perfect for babies, children, and pets. The backing is high-quality rubber for non-slip safety.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-2">
+          <button class="faq-question" onclick="toggleFaq('faq-2')">
+            What are the exact dimensions?
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>Each rug measures <strong>50cm wide × 120cm long</strong> (approximately 20" × 47"). This is the perfect "runner" size — ideal for beside a bed, in a bathroom, along a hallway, or in front of a sofa.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-3">
+          <button class="faq-question" onclick="toggleFaq('faq-3')">
+            How do I wash the rug?
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>The rug is easy to maintain:<br>
+            • <strong>Spot clean:</strong> Dab gently with mild soap and water<br>
+            • <strong>Machine wash:</strong> Use cold/warm water on gentle cycle<br>
+            • <strong>Air dry:</strong> Lay flat or hang to dry — avoid tumble drying<br>
+            Colors stay vibrant after 90+ washes!</p>
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-4">
+          <button class="faq-question" onclick="toggleFaq('faq-4')">
+            Is it safe for pets?
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>Absolutely! The cotton blend is non-toxic and pet-safe. The thick, soft pile is gentle on paws, and the non-slip backing means it won't slide when your pet plays on it. Many of our customers buy specifically for their cats and dogs!</p>
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-5">
+          <button class="faq-question" onclick="toggleFaq('faq-5')">
+            Can I mix colors in a bundle order?
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>Yes! When ordering the 2-piece ($39) or 3-piece ($55) bundle, you can choose any combination of colors. Simply specify your color choices in the order form. Mix and match to create the perfect palette for different rooms!</p>
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-6">
+          <button class="faq-question" onclick="toggleFaq('faq-6')">
+            How long does shipping take?
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>We ship worldwide! Estimated delivery times:<br>
+            • <strong>Asia:</strong> 7-14 business days<br>
+            • <strong>USA/Canada:</strong> 10-18 business days<br>
+            • <strong>Europe/Australia:</strong> 12-20 business days<br>
+            Bundle orders (2+ pieces) receive <strong>free priority shipping</strong>!</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ORDER ===== -->
+  <section class="order-section" id="order">
+    <div class="section-container">
+      <div class="order-wrapper">
+        <div class="order-info">
+          <span class="section-tag">Place Your Order</span>
+          <h2 class="order-title">Ready to Transform Your Home?</h2>
+          <p class="order-desc">
+            Fill in your details and we'll get back to you within <strong>24 hours</strong> to confirm your order and arrange payment. Fast, friendly, and hassle-free!
+          </p>
+
+          <!-- Urgency mini -->
+          <div class="order-urgency">
+            <span class="urgency-pulse"></span>
+            <span>🔥 <strong>15 people</strong> are viewing this right now</span>
+          </div>
+
+          <div class="order-contact-methods">
+            <a href="https://zalo.me/0764905949" class="contact-method" id="zalo-link" target="_blank" rel="noopener">
+              <span class="contact-icon">💬</span>
+              <div>
+                <strong>Zalo</strong>
+                <span>Quick response guaranteed</span>
+              </div>
+            </a>
+            <a href="mailto:hello@dozenko.io.vn" class="contact-method" id="email-link">
+              <span class="contact-icon">✉️</span>
+              <div>
+                <strong>Email Us</strong>
+                <span>hello@dozenko.io.vn</span>
+              </div>
+            </a>
+          </div>
+
+          <!-- Mini reviews -->
+          <div class="order-social-proof">
+            <div class="osp-avatars">
+              <div class="osp-av" style="background:#4A7BC8">S</div>
+              <div class="osp-av" style="background:#5A9E5A">E</div>
+              <div class="osp-av" style="background:#C8622A">M</div>
+              <div class="osp-av" style="background:#7C3A2A">J</div>
+            </div>
+            <div class="osp-text">
+              <strong>500+ customers</strong> already love their rugs ⭐⭐⭐⭐⭐
+            </div>
+          </div>
+        </div>
+
+        <form class="order-form" id="order-form" onsubmit="submitOrder(event)">
+          <h3 class="form-title">Order Form</h3>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="customer-name">Your Name *</label>
+              <input type="text" id="customer-name" name="name" placeholder="e.g. Sarah Johnson" required />
+            </div>
+            <div class="form-group">
+              <label for="customer-email">Email Address *</label>
+              <input type="email" id="customer-email" name="email" placeholder="your@email.com" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="customer-whatsapp">WhatsApp / Phone</label>
+            <input type="tel" id="customer-whatsapp" name="phone" placeholder="+1 234 567 8900" />
+          </div>
+
+          <div class="form-group">
+            <label for="order-quantity">Quantity *</label>
+            <select id="order-quantity" name="quantity" required>
+              <option value="">— Select —</option>
+              <option value="1">1 Piece — $25</option>
+              <option value="2">2 Pieces — $39 (Save $11!)</option>
+              <option value="3">3 Pieces — $55 (Save $20!)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Color(s) *</label>
+            <div class="color-checkboxes">
+              <label class="color-check" id="check-blue">
+                <input type="checkbox" name="colors" value="Ocean Blue" />
+                <span class="check-swatch swatch-blue"></span>
+                Ocean Blue
+              </label>
+              <label class="color-check" id="check-green">
+                <input type="checkbox" name="colors" value="Forest Green" />
+                <span class="check-swatch swatch-green"></span>
+                Forest Green
+              </label>
+              <label class="color-check" id="check-orange">
+                <input type="checkbox" name="colors" value="Caramel Sunset" />
+                <span class="check-swatch swatch-orange"></span>
+                Caramel Sunset
+              </label>
+              <label class="color-check" id="check-brown">
+                <input type="checkbox" name="colors" value="Warm Brown" />
+                <span class="check-swatch swatch-brown"></span>
+                Warm Brown
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="shipping-address">Shipping Address *</label>
+            <textarea id="shipping-address" name="address" rows="2" placeholder="Full address including city and country" required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="order-notes">Additional Notes</label>
+            <textarea id="order-notes" name="notes" rows="2" placeholder="Any special requests or questions..."></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full" id="submit-order-btn">
+            <span id="submit-btn-text">Send Order Request 🌸</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+          <p class="form-note">🔒 Your information is 100% secure. We'll reply within 24 hours.</p>
+        </form>
+
+        <!-- Success message -->
+        <div class="order-success" id="order-success" style="display:none;">
+          <div class="success-icon">🎉</div>
+          <h3>Order Request Sent!</h3>
+          <p>Thank you! We'll contact you within 24 hours to confirm your order and arrange payment.</p>
+          <a href="#products" class="btn btn-outline-dark">Continue Shopping</a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TƯ VẤN / CONSULTATION FORM ===== -->
+  <section class="consult-section" id="consult">
+    <div class="consult-bg-shapes" aria-hidden="true">
+      <div class="consult-shape consult-shape-1"></div>
+      <div class="consult-shape consult-shape-2"></div>
+    </div>
+    <div class="section-container">
+      <div class="consult-wrapper">
+
+        <!-- Left: Info -->
+        <div class="consult-info">
+          <span class="section-tag consult-tag">Tư Vấn Miễn Phí 🌸</span>
+          <h2 class="consult-title">Để Chúng Tôi <em>Tư Vấn</em> Cho Bạn</h2>
+          <p class="consult-desc">
+            Chỉ mất 2 phút điền thông tin — đội ngũ Dozenko sẽ liên hệ để tư vấn mẫu thảm phù hợp nhất với không gian và sở thích của bạn!
+          </p>
+
+          <div class="consult-benefits">
+            <div class="consult-benefit">
+              <span class="cb-icon">⚡</span>
+              <div>
+                <strong>Phản hồi trong 2 giờ</strong>
+                <span>Tư vấn nhanh qua Zalo / điện thoại</span>
+              </div>
+            </div>
+            <div class="consult-benefit">
+              <span class="cb-icon">🎁</span>
+              <div>
+                <strong>Hoàn toàn miễn phí</strong>
+                <span>Không ràng buộc — mua hay không tùy bạn</span>
+              </div>
+            </div>
+            <div class="consult-benefit">
+              <span class="cb-icon">💎</span>
+              <div>
+                <strong>Tư vấn chuyên sâu</strong>
+                <span>Gợi ý màu sắc &amp; kích thước phù hợp phòng bạn</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="consult-social-proof">
+            <div class="csp-avatars">
+              <div class="csp-av" style="background:#4A7BC8">L</div>
+              <div class="csp-av" style="background:#5A9E5A">H</div>
+              <div class="csp-av" style="background:#C8622A">M</div>
+              <div class="csp-av" style="background:#7C3A2A">T</div>
+            </div>
+            <span class="csp-text">Hơn <strong>500+ khách hàng</strong> đã nhận tư vấn &amp; hài lòng ⭐⭐⭐⭐⭐</span>
+          </div>
+        </div>
+
+        <!-- Right: Google Form Embed -->
+        <div class="consult-form-wrapper">
+          <div class="consult-form-card" id="consult-form-card">
+            <div class="consult-form-header">
+              <span class="cfh-icon">📋</span>
+              <div>
+                <h3>Phiếu Khảo Sát Nhu Cầu</h3>
+                <p>Điền thông tin để nhận tư vấn riêng</p>
+              </div>
+            </div>
+            <!-- 
+              ════════════════════════════════════════════════
+              HƯỚNG DẪN NHÚNG GOOGLE FORM:
+              1. Vào Google Forms → Tạo form mới với 7 câu hỏi bên dưới
+              2. Nhấn nút "Gửi" → chọn tab "<>" (Nhúng)
+              3. Sao chép link trong src="..." và thay vào đây
+              ════════════════════════════════════════════════
+            -->
+            <iframe
+              id="google-form-iframe"
+              src="https://docs.google.com/forms/d/e/1FAIpQLSd-P4_F9LLkXYmg9ip6ilmw5l1ao1BiAXqbXxN7kjVnilYSRQ/viewform?embedded=true"
+              width="100%"
+              height="1649"
+              frameborder="0"
+              marginheight="0"
+              marginwidth="0"
+              loading="lazy"
+              title="Phiếu tư vấn thảm hoa Dozenko"
+            >
+              Đang tải…
+            </iframe>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer" id="footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <a href="#" class="nav-logo footer-logo">
+          <span class="logo-icon">✿</span>
+          <span class="logo-text">Dozenko</span>
+        </a>
+        <p class="footer-tagline">Bringing artisan beauty to everyday spaces. Handcrafted with ❤️ for your home.</p>
+        <div class="footer-badges">
+          <span>🔒 Secure</span>
+          <span>🚚 Ships Worldwide</span>
+          <span>⭐ 4.9/5 Rating</span>
+        </div>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="#products" id="footer-products">Products</a>
+        <a href="#rooms" id="footer-rooms">Use Cases</a>
+        <a href="#features" id="footer-features">Quality</a>
+        <a href="#reviews" id="footer-reviews">Reviews</a>
+        <a href="#pricing" id="footer-pricing">Pricing</a>
+        <a href="#faq" id="footer-faq">FAQ</a>
+        <a href="#consult" id="footer-consult">Tư Vấn</a>
+        <a href="#order" id="footer-order">Order Now</a>
+      </div>
+      <div class="footer-contact">
+        <h4>Contact Us</h4>
+        <a href="mailto:hello@dozenko.io.vn" id="footer-email">hello@dozenko.io.vn</a>
+        <a href="https://zalo.me/0764905949" id="footer-zalo" target="_blank" rel="noopener">Zalo Chat</a>
+        <span class="footer-domain">dozenko.io.vn</span>
+        <p class="footer-response">⚡ Average response: under 2 hours</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 Dozenko. All rights reserved. Handcrafted with ❤️</p>
+    </div>
+  </footer>
+
+  <!-- Floating Order Button (mobile) -->
+  <a href="#order" class="floating-order-btn" id="floating-order-btn">
+    🌸 Order Now
+  </a>
+
+  <script src="script.js"></script>
+</body>
+</html>
