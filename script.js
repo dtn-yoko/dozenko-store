@@ -4,7 +4,7 @@
    ===================================================== */
 
 // ===== CRM CONFIG =====
-const CRM_API_BASE = 'https://mean-insect-30.loca.lt';
+const CRM_API_BASE = 'https://neat-rockets-find.loca.lt';
 const CRM_FETCH_HEADERS = { 'bypass-tunnel-reminder': '1' };
 
 // ===== GOOGLE SHEETS CONFIG =====
@@ -161,8 +161,8 @@ async function submitOrder(e) {
     return;
   }
 
-  const priceMap = { '1': '$25', '2': '$39', '3': '$55' };
-  const price = priceMap[qty] || '';
+  const priceMap = { '1': '300000', '2': '500000', '3': '700000', '4': '840000' };
+  const price = priceMap[qty] || '300000';
 
   submitBtn.disabled = true;
   submitText.textContent = 'Sending...';
@@ -197,7 +197,7 @@ async function submitOrder(e) {
     notes,
     colors: colors.join(', '),
     quantity: parseInt(qty, 10),
-    amount: price.replace(/[^0-9]/g, ''),
+    amount: parseInt(price, 10),
     status: 'pending'
   };
 
@@ -245,13 +245,89 @@ async function submitOrder(e) {
     }
   }
 
-  window.open('https://zalo.me/0764905949', '_blank');
-
   setTimeout(() => {
     form.style.display = 'none';
     success.style.display = 'block';
     success.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, 600);
+}
+
+// ===== SEPAY BUTTON: Submit CRM then open QR =====
+async function submitOrderAndPay() {
+  const form       = document.getElementById('order-form');
+  const submitBtn  = document.getElementById('sepay-pay-btn');
+
+  const name    = document.getElementById('customer-name').value.trim();
+  const email   = document.getElementById('customer-email').value.trim();
+  const phone   = document.getElementById('customer-whatsapp').value.trim();
+  const qty     = document.getElementById('order-quantity').value;
+  const address = document.getElementById('shipping-address').value.trim();
+  const notes   = document.getElementById('order-notes').value.trim();
+  const colors  = [...document.querySelectorAll('input[name="colors"]:checked')].map(cb => cb.value);
+
+  // Validate
+  if (!name) { showToast('Vui lòng nhập họ tên!', 'error'); return; }
+  if (!phone && !email) { showToast('Vui lòng nhập SĐT hoặc email!', 'error'); return; }
+  if (colors.length === 0) { showToast('Vui lòng chọn ít nhất 1 màu thảm!', 'error'); return; }
+  if (!qty) { showToast('Vui lòng chọn số lượng!', 'error'); return; }
+  if (!address) { showToast('Vui lòng nhập địa chỉ giao hàng!', 'error'); return; }
+
+  const priceMap = { '1': '300000', '2': '500000', '3': '700000', '4': '840000' };
+  const price = priceMap[qty] || '300000';
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Đang xử lý...';
+
+  // 1. Tạo/tìm khách hàng trong CRM
+  let customerId = null;
+  try {
+    await fetch(`${CRM_API_BASE}/api/customers`, {
+      method: 'POST',
+      headers: { ...CRM_FETCH_HEADERS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, zalo: phone })
+    });
+  } catch (err) { console.warn('Customer create:', err); }
+
+  try {
+    const res = await fetch(`${CRM_API_BASE}/api/customers`, { headers: CRM_FETCH_HEADERS });
+    const customers = await res.json();
+    const found = customers.find(c => c.phone === phone || c.name === name);
+    if (found) customerId = found.id;
+  } catch (err) { console.warn('Customer lookup:', err); }
+
+  // 2. Lấy product đầu tiên
+  let productId = null;
+  try {
+    const res = await fetch(`${CRM_API_BASE}/api/products`, { headers: CRM_FETCH_HEADERS });
+    const products = await res.json();
+    if (products[0]) productId = products[0].id;
+  } catch (err) { console.warn('Product lookup:', err); }
+
+  // 3. Tạo đơn hàng trong CRM
+  if (customerId && productId) {
+    try {
+      await fetch(`${CRM_API_BASE}/api/orders`, {
+        method: 'POST',
+        headers: { ...CRM_FETCH_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_id: customerId,
+          product_id: productId,
+          amount: parseInt(price, 10),
+          status: 'pending'
+        })
+      });
+    } catch (err) { console.warn('Order create:', err); }
+  }
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Thanh toán ngay bằng SePay';
+
+  // 4. Mở QR Sepay
+  const sepayUrl = `https://qr.sepay.vn/img?bank=Vietinbank&acc=100001671497&template=compact&amount=${price}&des=SEVQR`;
+  window.open(sepayUrl, '_blank');
+
+  // 5. Hiển thị thông báo
+  showToast('Đơn hàng đã được ghi nhận! Vui lòng quét QR để thanh toán.', 'info');
 }
 
 // ===== TOAST NOTIFICATION =====
