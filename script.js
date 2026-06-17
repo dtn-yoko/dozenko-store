@@ -3,6 +3,10 @@
    Google Sheets + All Interactions
    ===================================================== */
 
+// ===== CRM CONFIG =====
+const CRM_API_BASE = 'https://mean-insect-30.loca.lt';
+const CRM_FETCH_HEADERS = { 'bypass-tunnel-reminder': '1' };
+
 // ===== GOOGLE SHEETS CONFIG =====
 const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzEhMyargcqODgUhuiQu3J5F-47uB8X_wOOGARLaLanBcii_vdpxfTK_caVmTDhYts7Zg/exec';
 
@@ -185,6 +189,62 @@ async function submitOrder(e) {
     }
   }
 
+  const orderData = {
+    name,
+    phone,
+    email,
+    address,
+    notes,
+    colors: colors.join(', '),
+    quantity: parseInt(qty, 10),
+    amount: price.replace(/[^0-9]/g, ''),
+    status: 'pending'
+  };
+
+  try {
+    await fetch(`${CRM_API_BASE}/api/customers`, {
+      method: 'POST',
+      headers: { ...CRM_FETCH_HEADERS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, zalo: phone })
+    });
+  } catch (err) {
+    console.warn('Customer create error:', err);
+  }
+
+  try {
+    const productResponse = await fetch(`${CRM_API_BASE}/api/products`, { headers: CRM_FETCH_HEADERS });
+    const products = await productResponse.json();
+    const product = products[0];
+    if (product) {
+      orderData.product_id = product.id;
+    }
+  } catch (err) {
+    console.warn('Product lookup error:', err);
+  }
+
+  try {
+    const customerResponse = await fetch(`${CRM_API_BASE}/api/customers`, { headers: CRM_FETCH_HEADERS });
+    const customers = await customerResponse.json();
+    const customer = customers.find(c => c.phone === phone || c.name === name);
+    if (customer) {
+      orderData.customer_id = customer.id;
+    }
+  } catch (err) {
+    console.warn('Customer lookup error:', err);
+  }
+
+  if (orderData.product_id && orderData.customer_id) {
+    try {
+      await fetch(`${CRM_API_BASE}/api/orders`, {
+        method: 'POST',
+        headers: { ...CRM_FETCH_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
+    } catch (err) {
+      console.warn('Order create error:', err);
+    }
+  }
+
   window.open('https://zalo.me/0764905949', '_blank');
 
   setTimeout(() => {
@@ -239,11 +299,194 @@ window.addEventListener('scroll', () => {
 document.addEventListener('DOMContentLoaded', () => {
   setupReveal();
   initFlowerCanvas();
-  if (window.innerWidth > 768) {
-    const fb = document.getElementById('floating-order-btn');
-    if (fb) fb.style.display = 'none';
-  }
+  setupChatWidget();
 });
+
+function setupChatWidget() {
+  const chatToggle = document.getElementById('chat-toggle');
+  const chatPanel = document.getElementById('chat-panel');
+  const chatClose = document.getElementById('chat-close');
+  const chatMessages = document.getElementById('chat-messages');
+  const chatForm = document.getElementById('chat-input-form');
+  const chatInput = document.getElementById('chat-input');
+  const chatFormBtn = document.getElementById('chat-form-btn');
+  const chatSuggestions = document.getElementById('chat-suggestions');
+
+  if (!chatToggle || !chatPanel || !chatMessages || !chatForm || !chatInput || !chatFormBtn || !chatSuggestions) return;
+
+  const chatScript = {
+    greeting: 'Chào anh/chị! Em là Dozenko Chat, hỗ trợ tư vấn thảm chân giường nghệ thuật. Anh/chị có thể chọn câu hỏi gợi ý dưới đây hoặc gõ câu hỏi khác, em trả lời ngay.',
+    suggestions: [
+      'Thảm làm từ chất liệu gì?',
+      'Giá 1-2-3 tấm là bao nhiêu?',
+      'Kích thước nào phù hợp?',
+      'Cách giặt và giữ màu thế nào?'
+    ],
+    faqs: [
+      {
+        patterns: ['chất liệu', 'làm từ chất', 'vật liệu', 'sợi cotton'],
+        answer: 'Thảm Dozenko làm từ sợi cotton cao cấp, mềm mịn, không gây dị ứng và an toàn cho trẻ em, người lớn lẫn thú cưng. Đế thảm dày 3cm kèm lớp cao su chống trượt, giữ thảm yên khi đi lại.'
+      },
+      {
+        patterns: ['giá', 'mấy tiền', 'bao nhiêu tiền', 'giá bao nhiêu', 'giá bán', 'giá sản phẩm', 'tiền'],
+        answer: 'Giá bán hiện tại của Dozenko là: 1 tấm 300.000đ; 2 tấm 500.000đ (miễn phí ship); 3 tấm 700.000đ; 4 tấm 840.000đ. Nếu muốn tiết kiệm, anh/chị có thể chọn combo 2 tấm hoặc 3 tấm để được ưu đãi tốt hơn.',
+      },
+      {
+        patterns: ['kích thước', 'size'],
+        answer: 'Kích thước tiêu chuẩn của chúng mình là 50 × 120 cm. Đây là kích thước lý tưởng đặt ở chân giường, lối vào, góc đọc sách hoặc cạnh bồn rửa trong phòng tắm.'
+      },
+      {
+        patterns: ['vệ sinh', 'giặt', 'rửa', 'phai màu'],
+        answer: 'Anh/chị có thể lau sạch tại chỗ với xà phòng nhẹ, giặt máy nhẹ ở chế độ cold/warm rồi phơi khô tự nhiên. Tránh sấy máy nhiệt độ cao để giữ họa tiết và màu sắc bền.'
+      },
+      {
+        patterns: ['thú cưng', 'chó', 'mèo', 'pet'],
+        answer: 'Hoàn toàn an toàn cho thú cưng. Cotton nhẹ nhàng và đế chống trượt giúp thảm cố định khi chó mèo chạy nhảy. Nếu nhà hay có lông, chọn Nâu Ấm sẽ giúp giấu lông tốt hơn.'
+      },
+      {
+        patterns: ['combo', 'màu khác', 'mix', 'chọn màu'],
+        answer: 'Khi mua combo 2/3/4 tấm, anh/chị có thể mix nhiều màu khác nhau. Ví dụ Xanh Đại Dương + Cam Caramel hoặc Nâu Ấm + Xanh Lá Rừng đều rất đẹp.'
+      },
+      {
+        patterns: ['giao hàng', 'ship', 'vận chuyển', 'thời gian'],
+        answer: 'Nội thành giao 2-3 ngày, ngoại thành 3-7 ngày tùy khu vực. Combo 2 tấm trở lên thường được miễn phí vận chuyển.'
+      },
+      {
+        patterns: ['đổi trả', 'bảo hành', 'chính sách'],
+        answer: 'Chúng mình có đề xuất đổi trả trong 7 ngày nếu sản phẩm lỗi do nhà sản xuất. Ngoài ra, còn có thể hỗ trợ bảo hành 30 ngày với các vấn đề về đường may hoặc đế không đạt chuẩn.'
+      },
+      {
+        patterns: ['đắt', 'giá cao', 'giá'],
+        answer: 'Đây là thảm chân giường nghệ thuật, mỗi tấm chọn họa tiết riêng và dùng cotton xịn cùng đế chống trượt dày 3cm. Giá này giúp anh/chị sở hữu sản phẩm đẹp, bền và khác biệt, không phải thảm trang trí đại trà.'
+      },
+      {
+        patterns: ['phòng nhỏ', 'không gian nhỏ', 'nhỏ'],
+        answer: 'Rất phù hợp. 50 × 120 cm là kích thước gọn, điển hình dùng cho chân giường đơn, hành lang, lối vào hoặc cạnh sofa. Em cũng có thể tư vấn màu phù hợp ngay nếu anh/chị muốn.'
+      }
+    ],
+    closeOffer: {
+      patterns: ['mua', 'đặt', 'ship', 'combo', 'sẵn sàng', 'đơn', 'giá bao nhiêu', 'có ngay', 'tư vấn ngay'],
+      answer: 'Em gợi ý anh/chị lấy luôn combo 2 tấm 500.000đ để vừa tiết kiệm, vừa được miễn phí ship. Nếu anh/chị thích tông nhẹ thì Xanh Đại Dương + Xanh Lá Rừng, còn nếu muốn ấm áp thì Nâu Ấm + Cam Caramel rất sang. Mình đặt luôn để giữ giá và ưu đãi hôm nay, anh/chị bấm nút Đặt hàng bên dưới để vào form mua hàng ngay nhé.',
+      showFormButton: true
+    },
+    waitlist: {
+      patterns: ['chưa quyết', 'chưa sẵn sàng', 'xem trước', 'tư vấn', 'form', 'thông tin', 'chờ', 'chưa mua'],
+      answer: 'Nếu anh/chị chưa quyết được ngay, mình để lại form thông tin giúp em nhé. Em sẽ gửi bộ ảnh mẫu, bảng màu và ưu đãi mới nhất để anh/chị tham khảo.',
+      showFormButton: true
+    },
+    fallback: 'Em chưa rõ lắm, anh/chị có thể chọn câu hỏi gợi ý dưới đây hoặc hỏi em về chất liệu, kích thước, cách giặt. Nếu muốn đặt hàng, anh/chị chỉ cần nói "mua" hoặc "đặt hàng" nhé.'
+  };
+
+  let autoGreet = true;
+  let userQuestionCount = 0;
+
+  const appendMessage = (text, sender = 'bot') => {
+    const message = document.createElement('div');
+    message.className = `chat-message ${sender}`;
+    message.textContent = text;
+    chatMessages.appendChild(message);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  };
+
+  const renderChatSuggestions = () => {
+    chatSuggestions.innerHTML = '';
+    chatScript.suggestions.forEach((text) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'chat-suggestion-btn';
+      button.textContent = text;
+      button.addEventListener('click', () => {
+        processUserMessage(text);
+      });
+      chatSuggestions.appendChild(button);
+    });
+  };
+
+  const showCtaButton = () => {
+    chatFormBtn.classList.add('chat-cta-visible');
+    chatFormBtn.style.display = 'inline-flex';
+  };
+
+  const processUserMessage = (text) => {
+    userQuestionCount += 1;
+    appendMessage(text, 'user');
+    const reply = findAnswer(text);
+    setTimeout(() => {
+      appendMessage(reply.text, 'bot');
+      if (reply.showFormButton || userQuestionCount >= 2) {
+        showCtaButton();
+      }
+    }, 400);
+  };
+
+  const openChat = () => {
+    chatPanel.hidden = false;
+    chatToggle.classList.add('active');
+    if (autoGreet) {
+      autoGreet = false;
+      setTimeout(() => appendMessage(chatScript.greeting, 'bot'), 300);
+    }
+  };
+
+  const closeChat = () => {
+    chatPanel.hidden = true;
+    chatToggle.classList.remove('active');
+  };
+
+  const shouldShowFormButton = (text) => {
+    const normalized = text.toLowerCase();
+    return chatScript.closeOffer.patterns.some(p => normalized.includes(p)) || chatScript.waitlist.patterns.some(p => normalized.includes(p));
+  };
+
+  const findAnswer = (text) => {
+    const normalized = text.toLowerCase();
+    for (const faq of chatScript.faqs) {
+      if (faq.patterns.some(pattern => normalized.includes(pattern))) {
+        return { text: faq.answer, showFormButton: false };
+      }
+    }
+
+    if (chatScript.closeOffer.patterns.some(p => normalized.includes(p))) {
+      return { text: chatScript.closeOffer.answer, showFormButton: true };
+    }
+    if (chatScript.waitlist.patterns.some(p => normalized.includes(p))) {
+      return { text: chatScript.waitlist.answer, showFormButton: true };
+    }
+    return { text: chatScript.fallback, showFormButton: false };
+  };
+
+  chatFormBtn.style.display = 'none';
+  renderChatSuggestions();
+
+  chatToggle.addEventListener('click', () => {
+    if (chatPanel.hidden) openChat(); else closeChat();
+  });
+
+  chatClose.addEventListener('click', closeChat);
+
+  chatForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const value = chatInput.value.trim();
+    if (!value) return;
+    chatInput.value = '';
+    processUserMessage(value);
+  });
+
+  chatFormBtn.addEventListener('click', () => {
+    closeChat();
+    const orderSection = document.getElementById('order');
+    if (orderSection) orderSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else window.location.href = '#order';
+  });
+
+  chatToggle.addEventListener('mouseenter', () => chatToggle.style.transform = 'translateY(-1px)');
+  chatToggle.addEventListener('mouseleave', () => chatToggle.style.transform = 'translateY(0)');
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    chatToggle.style.transition = 'none';
+    chatFormBtn.style.transition = 'none';
+  }
+}
 
 // =====================================================
 // ===== FLOWER CANVAS ANIMATION (GIF-style) =====
