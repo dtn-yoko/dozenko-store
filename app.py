@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+import re
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
@@ -34,6 +35,38 @@ def row_to_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
     if row is None:
         return None
     return {k: row[k] for k in row.keys()}
+
+
+def _extract_order_id_from_payload(data: dict[str, Any]) -> int | None:
+    candidate_texts = [
+        data.get("referenceCode"),
+        data.get("reference_code"),
+        data.get("description"),
+        data.get("content"),
+        data.get("transferContent"),
+        data.get("transfer_content"),
+        data.get("memo"),
+        data.get("note"),
+        data.get("remark"),
+        data.get("order_id"),
+        data.get("orderId"),
+    ]
+
+    for value in candidate_texts:
+        if value is None:
+            continue
+        text = str(value).strip()
+        if not text:
+            continue
+
+        direct_match = re.search(r"(?:order[_\s-]?id|ORD)\s*[:#-]?\s*(\d+)", text, flags=re.IGNORECASE)
+        if direct_match:
+            return int(direct_match.group(1))
+
+        if text.isdigit():
+            return int(text)
+
+    return None
 
 
 def init_db() -> None:
@@ -455,14 +488,9 @@ def delete_order(order_id: int):
 
 def webhook_sepay_helper(data):
     """Helper to process SePay webhook - updates order status"""
-    ref_code = (data.get("referenceCode") or "").strip()
-    if not ref_code:
-        return jsonify({"error": "missing referenceCode"}), 400
-    
-    try:
-        order_id = int(ref_code.split(":")[-1])
-    except (ValueError, IndexError):
-        return jsonify({"error": "invalid referenceCode format"}), 400
+    order_id = _extract_order_id_from_payload(data)
+    if order_id is None:
+        return jsonify({"error": "could not find order id in webhook payload"}), 400
     
     with closing(get_connection()) as con:
         cur = con.cursor()
@@ -496,7 +524,7 @@ def webhook_sepay():
 @app.route("/api/webhook/sepay/test/<int:order_id>", methods=["POST"])
 def webhook_sepay_test(order_id: int):
     """Test endpoint - simulates SePay webhook for testing"""
-    data = {"referenceCode": f"order_id:{order_id}"}
+    data = {"referenceCode": f"ORD{order_id}", "description": f"ORD{order_id}"}
     return webhook_sepay_helper(data)
 
 
