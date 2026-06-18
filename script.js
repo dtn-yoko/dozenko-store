@@ -4,7 +4,7 @@
    ===================================================== */
 
 // ===== CRM CONFIG =====
-const CRM_API_BASE = 'https://neat-rockets-find.loca.lt';
+const CRM_API_BASE = 'https://dozenko-crm.loca.lt';
 const CRM_FETCH_HEADERS = { 'bypass-tunnel-reminder': '1' };
 
 // ===== GOOGLE SHEETS CONFIG =====
