@@ -477,6 +477,34 @@ def create_order():
     return jsonify(row_to_dict(row)), 201
 
 
+@app.route("/api/orders/<int:order_id>", methods=["GET"])
+def get_order(order_id: int):
+    with closing(get_connection()) as con:
+        row = con.execute(
+            """
+            SELECT
+              o.id,
+              o.customer_id,
+              o.product_id,
+              o.amount,
+              o.status,
+              o.order_date,
+              c.name AS customer_name,
+              c.phone AS customer_phone,
+              p.name AS product_name,
+              p.type AS product_type
+            FROM orders o
+            JOIN customers c ON c.id = o.customer_id
+            JOIN products p ON p.id = o.product_id
+            WHERE o.id = ?
+            """,
+            (order_id,),
+        ).fetchone()
+    if not row:
+        return jsonify({"error": "order not found"}), 404
+    return jsonify(row_to_dict(row))
+
+
 @app.route("/api/orders/<int:order_id>", methods=["PUT"])
 def update_order(order_id: int):
     data = request.get_json(silent=True) or {}

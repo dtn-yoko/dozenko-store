@@ -381,11 +381,11 @@ async function submitOrderAndPay() {
 
   // 4. Mở QR Sepay
   const orderCode = createdOrderId ? `ORD${createdOrderId}` : `ORD${Date.now()}`;
-  const sepayUrl = `https://qr.sepay.vn/img?bank=Vietinbank&acc=100001671497&template=compact&amount=${price}&des=${orderCode}`;
+  const paymentPageUrl = `${window.location.origin}/pay.html?orderId=${encodeURIComponent(createdOrderId)}&amount=${encodeURIComponent(price)}&orderCode=${encodeURIComponent(orderCode)}&api=${encodeURIComponent(CRM_API_BASE)}`;
   if (qrWindow && !qrWindow.closed) {
-    qrWindow.location.href = sepayUrl;
+    qrWindow.location.href = paymentPageUrl;
   } else {
-    window.location.href = sepayUrl;
+    window.location.href = paymentPageUrl;
     return;
   }
 

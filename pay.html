@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dozenko - Thanh Toan</title>
+  <style>
+    :root {
+      --bg: #f7f4ed;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --pending: #b45309;
+      --success: #166534;
+      --accent: #2a4e7c;
+      --line: #e5e7eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: radial-gradient(circle at top left, #f8efe1 0%, var(--bg) 45%, #f2f0eb 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .card {
+      width: min(520px, 100%);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 20px 40px rgba(30, 41, 59, 0.08);
+    }
+    .title {
+      margin: 0 0 10px;
+      font-size: 1.35rem;
+      font-weight: 700;
+    }
+    .hint {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .meta {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+    }
+    .meta b { color: var(--text); }
+    .qr-wrap {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .qr-wrap img {
+      width: min(360px, 100%);
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      border-radius: 8px;
+    }
+    .status {
+      border-radius: 10px;
+      padding: 12px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .status.pending {
+      background: #fff7ed;
+      color: var(--pending);
+      border: 1px solid #fed7aa;
+    }
+    .status.success {
+      background: #ecfdf3;
+      color: var(--success);
+      border: 1px solid #86efac;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 14px;
+    }
+    .btn {
+      appearance: none;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 0.92rem;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-outline { background: #fff; color: var(--text); border: 1px solid var(--line); }
+    .small {
+      color: var(--muted);
+      font-size: 0.85rem;
+      text-align: center;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1 class="title">Thanh Toan Don Hang Dozenko</h1>
+    <p class="hint">Quet QR ben duoi de chuyen khoan. Trang nay se tu dong cap nhat khi he thong nhan duoc tien.</p>
+
+    <div class="meta">
+      <div><b>Ma don:</b> <span id="order-code">-</span></div>
+      <div><b>So tien:</b> <span id="amount">-</span></div>
+      <div><b>Order ID:</b> <span id="order-id">-</span></div>
+    </div>
+
+    <div class="qr-wrap">
+      <img id="qr-image" alt="QR thanh toan SePay" />
+    </div>
+
+    <div id="status-box" class="status pending">Dang cho chuyen khoan...</div>
+    <div class="small" id="status-note">He thong kiem tra trang thai moi 3 giay.</div>
+
+    <div class="actions">
+      <a class="btn btn-outline" href="/">Quay ve trang chu</a>
+      <button class="btn btn-primary" id="refresh-btn" type="button">Kiem tra lai ngay</button>
+    </div>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const orderId = Number(params.get("orderId") || "0");
+    const orderCode = params.get("orderCode") || `ORD${orderId || ""}`;
+    const amountRaw = params.get("amount") || "0";
+    const apiOverride = (params.get("api") || "").trim();
+
+    const apiBase = (() => {
+      if (apiOverride) return apiOverride.replace(/\/$/, "");
+      if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
+        return window.location.origin;
+      }
+      return "https://dozenko-crm.onrender.com";
+    })();
+
+    const amount = Number(amountRaw || 0);
+    const qrUrl = `https://qr.sepay.vn/img?bank=Vietinbank&acc=100001671497&template=compact&amount=${encodeURIComponent(amount)}&des=${encodeURIComponent(orderCode)}`;
+
+    const statusBox = document.getElementById("status-box");
+    const statusNote = document.getElementById("status-note");
+    const refreshBtn = document.getElementById("refresh-btn");
+
+    document.getElementById("order-code").textContent = orderCode || "-";
+    document.getElementById("amount").textContent = `${amount.toLocaleString("vi-VN")}d`;
+    document.getElementById("order-id").textContent = String(orderId || "-");
+    document.getElementById("qr-image").src = qrUrl;
+
+    function setPending(msg) {
+      statusBox.className = "status pending";
+      statusBox.textContent = msg;
+    }
+
+    function setSuccess(msg) {
+      statusBox.className = "status success";
+      statusBox.textContent = msg;
+      statusNote.textContent = "Thanh toan thanh cong. Co the dong tab nay.";
+    }
+
+    async function checkOrderStatus() {
+      if (!orderId) {
+        setPending("Khong tim thay order ID. Vui long quay lai dat don moi.");
+        return false;
+      }
+
+      try {
+        const res = await fetch(`${apiBase}/api/orders/${orderId}`);
+        if (!res.ok) {
+          setPending("Chua lay duoc trang thai don hang. Se thu lai...");
+          return false;
+        }
+        const order = await res.json();
+        if ((order.status || "").toLowerCase() === "success") {
+          setSuccess("Chuyen khoan thanh cong! Don hang da duoc xac nhan.");
+          return true;
+        }
+        setPending("Dang cho chuyen khoan... Don hang hien tai: " + (order.status || "pending"));
+        return false;
+      } catch (err) {
+        setPending("Loi ket noi CRM. Se thu lai...");
+        return false;
+      }
+    }
+
+    let stopped = false;
+    let ticks = 0;
+    const maxTicks = 200; // ~10 minutes
+
+    async function loop() {
+      if (stopped) return;
+      const ok = await checkOrderStatus();
+      ticks += 1;
+      if (ok || ticks >= maxTicks) {
+        stopped = ok;
+        if (!ok) statusNote.textContent = "Van chua nhan duoc xac nhan. Co the bam Kiem tra lai ngay sau.";
+        return;
+      }
+      setTimeout(loop, 3000);
+    }
+
+    refreshBtn.addEventListener("click", async () => {
+      const ok = await checkOrderStatus();
+      if (ok) stopped = true;
+    });
+
+    loop();
+  </script>
+</body>
+</html>
