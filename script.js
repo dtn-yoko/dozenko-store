@@ -385,7 +385,8 @@ async function submitOrderAndPay() {
   if (qrWindow && !qrWindow.closed) {
     qrWindow.location.href = sepayUrl;
   } else {
-    window.open(sepayUrl, '_blank');
+    window.location.href = sepayUrl;
+    return;
   }
 
   // 5. Hiển thị thông báo
