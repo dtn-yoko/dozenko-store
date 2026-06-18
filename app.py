@@ -69,6 +69,54 @@ def _extract_order_id_from_payload(data: dict[str, Any]) -> int | None:
     return None
 
 
+def _extract_amount_from_payload(data: dict[str, Any]) -> float | None:
+    amount_keys = [
+        "amount",
+        "transferAmount",
+        "transfer_amount",
+        "transactionAmount",
+        "transaction_amount",
+        "creditAmount",
+        "credit_amount",
+    ]
+
+    for key in amount_keys:
+        raw = data.get(key)
+        if raw is None:
+            continue
+        if isinstance(raw, (int, float)):
+            return float(raw)
+
+        text = str(raw).strip()
+        if not text:
+            continue
+
+        # Accept formats like 300000, 300,000, 300.000
+        normalized = text.replace(",", "").replace(".", "")
+        if normalized.isdigit():
+            return float(normalized)
+
+    return None
+
+
+def _find_pending_order_by_amount(amount: float) -> int | None:
+    with closing(get_connection()) as con:
+        rows = con.execute(
+            """
+            SELECT id
+            FROM orders
+            WHERE status = 'pending' AND ABS(amount - ?) < 0.5
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (amount,),
+        ).fetchall()
+
+    if not rows:
+        return None
+    return int(rows[0]["id"])
+
+
 def init_db() -> None:
     with closing(get_connection()) as con:
         cur = con.cursor()
@@ -488,9 +536,16 @@ def delete_order(order_id: int):
 
 def webhook_sepay_helper(data):
     """Helper to process SePay webhook - updates order status"""
+    matched_by = "order_code"
     order_id = _extract_order_id_from_payload(data)
     if order_id is None:
-        return jsonify({"error": "could not find order id in webhook payload"}), 400
+        amount = _extract_amount_from_payload(data)
+        if amount is None:
+            return jsonify({"error": "could not find order id or amount in webhook payload"}), 400
+        order_id = _find_pending_order_by_amount(amount)
+        if order_id is None:
+            return jsonify({"error": "no pending order matched transfer amount"}), 404
+        matched_by = "amount"
     
     with closing(get_connection()) as con:
         cur = con.cursor()
@@ -504,7 +559,7 @@ def webhook_sepay_helper(data):
         )
         con.commit()
     
-    return jsonify({"ok": True, "order_id": order_id}), 200
+    return jsonify({"ok": True, "order_id": order_id, "matched_by": matched_by}), 200
 
 
 @app.route("/api/webhook/sepay", methods=["POST"])
@@ -517,6 +572,11 @@ def webhook_sepay():
         data = request.get_json(silent=True) or {}
     except Exception:
         return jsonify({"error": "invalid json"}), 400
+
+    if isinstance(data.get("data"), dict):
+        merged = dict(data)
+        merged.update(data["data"])
+        data = merged
     
     return webhook_sepay_helper(data)
 
