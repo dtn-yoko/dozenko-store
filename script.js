@@ -230,7 +230,7 @@ async function submitOrder(e) {
     await fetch(`${CRM_API_BASE}/api/customers`, {
       method: 'POST',
       headers: { ...CRM_FETCH_HEADERS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, zalo: phone })
+      body: JSON.stringify({ name, phone, email, zalo: phone })
     });
   } catch (err) {
     console.warn('Customer create error:', err);

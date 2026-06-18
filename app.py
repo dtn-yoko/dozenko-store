@@ -141,11 +141,18 @@ def init_db() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 phone TEXT NOT NULL UNIQUE,
+                email TEXT,
                 zalo TEXT,
                 signup_date TEXT NOT NULL
             )
             """
         )
+
+        # Add email column to existing databases that were created without it
+        try:
+            cur.execute("ALTER TABLE customers ADD COLUMN email TEXT")
+        except Exception:
+            pass  # Column already exists
 
         cur.execute(
             """
@@ -301,6 +308,7 @@ def create_customer():
     data = request.get_json(silent=True) or {}
     name = (data.get("name") or "").strip()
     phone = (data.get("phone") or "").strip()
+    email = (data.get("email") or "").strip() or None
     zalo = (data.get("zalo") or phone).strip()
 
     if not name:
@@ -312,14 +320,20 @@ def create_customer():
         cur = con.cursor()
         existing = cur.execute("SELECT * FROM customers WHERE phone = ?", (phone,)).fetchone()
         if existing:
+            # Update email if provided and existing customer doesn't have one
+            if email and not existing["email"]:
+                cur.execute("UPDATE customers SET email = ? WHERE id = ?", (email, existing["id"]))
+                con.commit()
+                row = cur.execute("SELECT * FROM customers WHERE id = ?", (existing["id"],)).fetchone()
+                return jsonify(row_to_dict(row)), 200
             return jsonify(row_to_dict(existing)), 200
 
         cur.execute(
             """
-            INSERT INTO customers(name, phone, zalo, signup_date)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO customers(name, phone, email, zalo, signup_date)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (name, phone, zalo, now_iso()),
+            (name, phone, email, zalo, now_iso()),
         )
         customer_id = cur.lastrowid
         con.commit()
@@ -339,6 +353,8 @@ def update_customer(customer_id: int):
 
         name = (data.get("name", existing["name"]) or "").strip()
         phone = (data.get("phone", existing["phone"]) or "").strip()
+        email_val = data.get("email", existing["email"])
+        email = (email_val or "").strip() or None
         zalo = (data.get("zalo", existing["zalo"]) or "").strip()
 
         if not name or not phone:
@@ -351,8 +367,8 @@ def update_customer(customer_id: int):
             return jsonify({"error": "phone already exists"}), 409
 
         cur.execute(
-            "UPDATE customers SET name = ?, phone = ?, zalo = ? WHERE id = ?",
-            (name, phone, zalo, customer_id),
+            "UPDATE customers SET name = ?, phone = ?, email = ?, zalo = ? WHERE id = ?",
+            (name, phone, email, zalo, customer_id),
         )
         con.commit()
         row = cur.execute("SELECT * FROM customers WHERE id = ?", (customer_id,)).fetchone()

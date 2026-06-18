@@ -97,6 +97,7 @@ async function loadCustomers() {
       <td>${c.id}</td>
       <td>${esc(c.name)}</td>
       <td>${esc(c.phone)}</td>
+      <td>${esc(c.email || "")}</td>
       <td>${esc(c.zalo || "")}</td>
       <td>${esc(c.signup_date || "")}</td>
       <td>
@@ -115,13 +116,14 @@ async function loadCustomers() {
       if (!c) return;
       const name = prompt("Ten", c.name);
       const phone = prompt("Phone", c.phone);
+      const email = prompt("Email", c.email || "");
       const zalo = prompt("Zalo", c.zalo || "");
       if (!name || !phone) return;
       try {
         await api(`/api/customers/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, phone, zalo })
+          body: JSON.stringify({ name, phone, email, zalo })
         });
         await loadAll();
       } catch (e) {
@@ -239,12 +241,13 @@ function bindAddButtons() {
     const name = prompt("Ten khach hang");
     const phone = prompt("Phone");
     if (!name || !phone) return;
+    const email = prompt("Email") || "";
     const zalo = prompt("Zalo", phone) || phone;
     try {
       await api("/api/customers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, zalo })
+        body: JSON.stringify({ name, phone, email, zalo })
       });
       await loadAll();
     } catch (e) {
