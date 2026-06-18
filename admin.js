@@ -157,6 +157,7 @@ async function loadOrders() {
       <td>
         <div class="actions">
           <button class="btn btn-alt" data-edit-order="${o.id}">Sua</button>
+          <button class="btn" data-confirm-order="${o.id}">Xac nhan thanh toan</button>
           <button class="btn btn-danger" data-del-order="${o.id}">Xoa</button>
         </div>
       </td>
@@ -189,6 +190,19 @@ async function loadOrders() {
       if (!confirm("Xoa don hang nay?")) return;
       try {
         await api(`/api/orders/${id}`, { method: "DELETE" });
+        await loadAll();
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-confirm-order]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = Number(btn.dataset.confirmOrder);
+      if (!confirm("Xac nhan don hang nay da thanh toan?")) return;
+      try {
+        await api(`/api/orders/${id}/confirm-payment`, { method: "POST" });
         await loadAll();
       } catch (e) {
         alert(e.message);
