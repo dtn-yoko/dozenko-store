@@ -979,21 +979,6 @@
     </div>
   </div>
 
-  <script>
-    // SePay payment button handler (replace YOUR_SEPAY_PAYMENT_LINK with your dashboard link)
-    (function(){
-      const btn = document.getElementById('sepay-pay-btn');
-      if (!btn) return;
-      btn.addEventListener('click', function () {
-        const name = document.getElementById('customer-name')?.value || '';
-        const email = document.getElementById('customer-email')?.value || '';
-        const qty = document.getElementById('order-quantity')?.value || '1';
-        // Payment link lấy từ SePay dashboard
-        const sepayLink = 'https://qr.sepay.vn/img?bank=VietinBank&acc=100001671497&template=compact&amount=300000&des=SEVQR&showinfo=true&holder=NGUYEN%20DUC%20THANH&store=Th%E1%BA%A3m%20hoa%20Dozenko';
-        window.location.href = sepayLink;
-      });
-    })();
-  </script>
   <script src="script.js"></script>
 </body>
 </html>
