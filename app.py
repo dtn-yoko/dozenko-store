@@ -8,6 +8,8 @@ from typing import Any
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
+import hmac
+import hashlib
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -451,6 +453,90 @@ def delete_order(order_id: int):
     return jsonify({"ok": True})
 
 
+def webhook_sepay_helper(data):
+    """Helper to process SePay webhook - updates order status"""
+    ref_code = (data.get("referenceCode") or "").strip()
+    if not ref_code:
+        return jsonify({"error": "missing referenceCode"}), 400
+    
+    try:
+        order_id = int(ref_code.split(":")[-1])
+    except (ValueError, IndexError):
+        return jsonify({"error": "invalid referenceCode format"}), 400
+    
+    with closing(get_connection()) as con:
+        cur = con.cursor()
+        existing = cur.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
+        if not existing:
+            return jsonify({"error": "order not found"}), 404
+        
+        cur.execute(
+            "UPDATE orders SET status = ? WHERE id = ?",
+            ("success", order_id),
+        )
+        con.commit()
+    
+    return jsonify({"ok": True, "order_id": order_id}), 200
+
+
+@app.route("/api/webhook/sepay", methods=["POST"])
+def webhook_sepay():
+    """
+    SePay webhook handler - updates order status on payment confirmation
+    Expects: {"referenceCode": "order_id:123", ...}
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+    except Exception:
+        return jsonify({"error": "invalid json"}), 400
+    
+    return webhook_sepay_helper(data)
+
+
+@app.route("/api/webhook/sepay/test/<int:order_id>", methods=["POST"])
+def webhook_sepay_test(order_id: int):
+    """Test endpoint - simulates SePay webhook for testing"""
+    data = {"referenceCode": f"order_id:{order_id}"}
+    return webhook_sepay_helper(data)
+
+
+@app.route("/api/orders/<int:order_id>/confirm-payment", methods=["POST"])
+def confirm_payment(order_id: int):
+    """Admin endpoint to confirm payment received and update order status to success"""
+    with closing(get_connection()) as con:
+        cur = con.cursor()
+        existing = cur.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
+        if not existing:
+            return jsonify({"error": "order not found"}), 404
+        
+        cur.execute(
+            "UPDATE orders SET status = ? WHERE id = ?",
+            ("success", order_id),
+        )
+        con.commit()
+    
+    with closing(get_connection()) as con:
+        row = con.execute(
+            """
+            SELECT
+              o.id,
+              o.customer_id,
+              o.product_id,
+              o.amount,
+              o.status,
+              o.order_date,
+              c.name AS customer_name,
+              c.phone AS customer_phone,
+              p.name AS product_name,
+              p.type AS product_type
+            FROM orders o
+            JOIN customers c ON c.id = o.customer_id
+            JOIN products p ON p.id = o.product_id
+            WHERE o.id = ?
+            """,
+            (order_id,),
+        ).fetchone()
+    return jsonify(row_to_dict(row))
 init_db()
 
 
