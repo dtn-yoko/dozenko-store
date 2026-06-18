@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dozenko Admin</title>
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+  <main class="admin-wrap">
+    <header class="admin-head">
+      <h1>Dozenko CRM Admin</h1>
+      <p>Quan ly san pham, khach hang va don hang.</p>
+    </header>
+
+    <section class="tabs">
+      <button class="tab-btn active" data-tab="products">San pham</button>
+      <button class="tab-btn" data-tab="customers">Khach hang</button>
+      <button class="tab-btn" data-tab="orders">Don hang</button>
+    </section>
+
+    <section class="panel active" id="panel-products">
+      <div class="panel-head">
+        <h2>San pham</h2>
+        <button id="add-product" class="btn">Them moi</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Ten</th><th>Loai</th><th>Gia</th><th>Ton kho</th><th>Hanh dong</th>
+            </tr>
+          </thead>
+          <tbody id="products-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-customers">
+      <div class="panel-head">
+        <h2>Khach hang</h2>
+        <button id="add-customer" class="btn">Them moi</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Ten</th><th>Phone</th><th>Zalo</th><th>Ngay dang ky</th><th>Hanh dong</th>
+            </tr>
+          </thead>
+          <tbody id="customers-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-orders">
+      <div class="panel-head">
+        <h2>Don hang</h2>
+        <button id="add-order" class="btn">Them moi</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Khach</th><th>San pham</th><th>So tien</th><th>Trang thai</th><th>Ngay mua</th><th>Hanh dong</th>
+            </tr>
+          </thead>
+          <tbody id="orders-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="admin.js"></script>
+</body>
+</html>

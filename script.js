@@ -4,8 +4,31 @@
    ===================================================== */
 
 // ===== CRM CONFIG =====
-const CRM_API_BASE = 'https://dozenko-crm.loca.lt';
-const CRM_FETCH_HEADERS = { 'bypass-tunnel-reminder': '1' };
+const CRM_API_BASE = (() => {
+  const explicit = (window.DOZENKO_CRM_API_BASE || '').trim();
+  if (explicit) return explicit.replace(/\/$/, '');
+
+  const host = window.location.hostname;
+  if (host === '127.0.0.1' || host === 'localhost') {
+    return window.location.origin;
+  }
+
+  if (host === 'dozenko.io.vn' || host.endsWith('.dozenko.io.vn')) {
+    return 'https://dozenko-crm.onrender.com';
+  }
+
+  // On static production hosts (e.g. GitHub Pages), API base must be configured explicitly.
+  return '';
+})();
+const CRM_FETCH_HEADERS = CRM_API_BASE.includes('loca.lt')
+  ? { 'bypass-tunnel-reminder': '1' }
+  : {};
+
+function ensureCrmConfigured() {
+  if (CRM_API_BASE) return true;
+  showToast('Website chua cau hinh CRM API public. Vui long cap nhat window.DOZENKO_CRM_API_BASE.', 'error');
+  return false;
+}
 
 // ===== GOOGLE SHEETS CONFIG =====
 const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzEhMyargcqODgUhuiQu3J5F-47uB8X_wOOGARLaLanBcii_vdpxfTK_caVmTDhYts7Zg/exec';
@@ -142,6 +165,8 @@ function setupReveal() {
 async function submitOrder(e) {
   e.preventDefault();
 
+  if (!ensureCrmConfigured()) return;
+
   const form       = document.getElementById('order-form');
   const submitBtn  = document.getElementById('submit-order-btn');
   const submitText = document.getElementById('submit-btn-text');
@@ -254,6 +279,8 @@ async function submitOrder(e) {
 
 // ===== SEPAY BUTTON: Submit CRM then open QR =====
 async function submitOrderAndPay() {
+  if (!ensureCrmConfigured()) return;
+
   const form       = document.getElementById('order-form');
   const submitBtn  = document.getElementById('sepay-pay-btn');
 
@@ -275,6 +302,14 @@ async function submitOrderAndPay() {
   const priceMap = { '1': '300000', '2': '500000', '3': '700000', '4': '840000' };
   const price = priceMap[qty] || '300000';
 
+  // Open popup immediately in the click context to avoid browser popup blockers.
+  let qrWindow = null;
+  try {
+    qrWindow = window.open('', '_blank');
+  } catch (err) {
+    console.warn('Popup open blocked:', err);
+  }
+
   submitBtn.disabled = true;
   submitBtn.textContent = 'Đang xử lý...';
 
@@ -295,39 +330,66 @@ async function submitOrderAndPay() {
     if (found) customerId = found.id;
   } catch (err) { console.warn('Customer lookup:', err); }
 
-  // 2. Lấy product đầu tiên
+  // 2. Chon product theo so luong
   let productId = null;
+  let createdOrderId = null;
   try {
     const res = await fetch(`${CRM_API_BASE}/api/products`, { headers: CRM_FETCH_HEADERS });
     const products = await res.json();
-    if (products[0]) productId = products[0].id;
+    if (products && products.length) {
+      const nameMap = {
+        '1': 'Thảm Hoa',
+        '2': 'Combo 2',
+        '3': 'Combo 3',
+        '4': 'Combo 4'
+      };
+      const keyword = nameMap[qty] || 'Thảm Hoa';
+      const found = products.find(p => (p.name || '').includes(keyword));
+      productId = (found || products[0]).id;
+    }
   } catch (err) { console.warn('Product lookup:', err); }
 
   // 3. Tạo đơn hàng trong CRM
   if (customerId && productId) {
     try {
-      await fetch(`${CRM_API_BASE}/api/orders`, {
+      const orderRes = await fetch(`${CRM_API_BASE}/api/orders`, {
         method: 'POST',
         headers: { ...CRM_FETCH_HEADERS, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customer_id: customerId,
           product_id: productId,
           amount: parseInt(price, 10),
-          status: 'pending'
+          status: 'pending',
+          quantity: parseInt(qty, 10)
         })
       });
+      if (orderRes.ok) {
+        const order = await orderRes.json();
+        createdOrderId = order.id;
+      }
     } catch (err) { console.warn('Order create:', err); }
   }
 
   submitBtn.disabled = false;
   submitBtn.textContent = 'Thanh toán ngay bằng SePay';
 
+  if (!createdOrderId) {
+    if (qrWindow && !qrWindow.closed) qrWindow.close();
+    showToast('Khong tao duoc don hang trong CRM. Vui long mo website bang server CRM va thu lai.', 'error');
+    return;
+  }
+
   // 4. Mở QR Sepay
-  const sepayUrl = `https://qr.sepay.vn/img?bank=Vietinbank&acc=100001671497&template=compact&amount=${price}&des=SEVQR`;
-  window.open(sepayUrl, '_blank');
+  const orderCode = createdOrderId ? `ORD${createdOrderId}` : `ORD${Date.now()}`;
+  const sepayUrl = `https://qr.sepay.vn/img?bank=Vietinbank&acc=100001671497&template=compact&amount=${price}&des=${orderCode}`;
+  if (qrWindow && !qrWindow.closed) {
+    qrWindow.location.href = sepayUrl;
+  } else {
+    window.open(sepayUrl, '_blank');
+  }
 
   // 5. Hiển thị thông báo
-  showToast('Đơn hàng đã được ghi nhận! Vui lòng quét QR để thanh toán.', 'info');
+  showToast(`Đơn hàng ${orderCode} da duoc ghi nhan! Vui long quet QR de thanh toan.`, 'info');
 }
 
 // ===== TOAST NOTIFICATION =====
