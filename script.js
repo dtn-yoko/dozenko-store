@@ -30,6 +30,14 @@ function ensureCrmConfigured() {
   return false;
 }
 
+function normalizePhone(phone) {
+  return String(phone || '').replace(/\D/g, '');
+}
+
+function isValidPhone(phone) {
+  return /^\d{10,11}$/.test(phone || '');
+}
+
 // ===== GOOGLE SHEETS CONFIG =====
 const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzEhMyargcqODgUhuiQu3J5F-47uB8X_wOOGARLaLanBcii_vdpxfTK_caVmTDhYts7Zg/exec';
 
@@ -174,28 +182,20 @@ async function submitOrder(e) {
 
   const name    = document.getElementById('customer-name').value.trim();
   const email   = document.getElementById('customer-email').value.trim();
-  const phone   = document.getElementById('customer-whatsapp').value.trim();
+  const rawPhone = document.getElementById('customer-whatsapp').value.trim();
+  const phone = normalizePhone(rawPhone);
   const qty     = document.getElementById('order-quantity').value;
   const address = document.getElementById('shipping-address').value.trim();
   const notes   = document.getElementById('order-notes').value.trim();
   const colors  = [...document.querySelectorAll('input[name="colors"]:checked')].map(cb => cb.value);
   const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
 
-  // Validate SĐT: bắt buộc nhập và phải đúng 10-11 số
-  if (!phone) {
-    showToast('Vui lòng nhập số điện thoại / Zalo!', 'error');
-    document.getElementById('customer-whatsapp').focus();
-    return;
-  }
-  const phoneDigits = phone.replace(/[^0-9]/g, '');
-  if (phoneDigits.length < 10 || phoneDigits.length > 11) {
-    showToast('Số điện thoại phải có 10-11 chữ số! Vui lòng kiểm tra lại.', 'error');
-    document.getElementById('customer-whatsapp').focus();
-    return;
-  }
-
   if (colors.length === 0) {
-    showToast('Vui lòng chọn ít nhất 1 màu thảm!', 'error');
+    showToast('Please select at least one color!', 'error');
+    return;
+  }
+  if (!isValidPhone(phone)) {
+    showToast('So dien thoai phai gom 10-11 chu so.', 'error');
     return;
   }
 
@@ -299,21 +299,17 @@ async function submitOrderAndPay() {
 
   const name    = document.getElementById('customer-name').value.trim();
   const email   = document.getElementById('customer-email').value.trim();
-  const phone   = document.getElementById('customer-whatsapp').value.trim();
+  const rawPhone = document.getElementById('customer-whatsapp').value.trim();
+  const phone = normalizePhone(rawPhone);
   const qty     = document.getElementById('order-quantity').value;
   const address = document.getElementById('shipping-address').value.trim();
   const notes   = document.getElementById('order-notes').value.trim();
   const colors  = [...document.querySelectorAll('input[name="colors"]:checked')].map(cb => cb.value);
 
   // Validate
-  if (!name) { showToast('Vui lòng nhập họ tên!', 'error'); document.getElementById('customer-name').focus(); return; }
-  if (!phone) { showToast('Vui lòng nhập số điện thoại / Zalo!', 'error'); document.getElementById('customer-whatsapp').focus(); return; }
-  const phoneDigitsPay = phone.replace(/[^0-9]/g, '');
-  if (phoneDigitsPay.length < 10 || phoneDigitsPay.length > 11) {
-    showToast('Số điện thoại phải có 10-11 chữ số! Vui lòng kiểm tra lại.', 'error');
-    document.getElementById('customer-whatsapp').focus();
-    return;
-  }
+  if (!name) { showToast('Vui lòng nhập họ tên!', 'error'); return; }
+  if (!email) { showToast('Vui long nhap email!', 'error'); return; }
+  if (!isValidPhone(phone)) { showToast('So dien thoai phai gom 10-11 chu so.', 'error'); return; }
   if (colors.length === 0) { showToast('Vui lòng chọn ít nhất 1 màu thảm!', 'error'); return; }
   if (!qty) { showToast('Vui lòng chọn số lượng!', 'error'); return; }
   if (!address) { showToast('Vui lòng nhập địa chỉ giao hàng!', 'error'); return; }
@@ -338,7 +334,7 @@ async function submitOrderAndPay() {
     await fetch(`${CRM_API_BASE}/api/customers`, {
       method: 'POST',
       headers: { ...CRM_FETCH_HEADERS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, zalo: phone })
+      body: JSON.stringify({ name, phone, email, zalo: phone })
     });
   } catch (err) { console.warn('Customer create:', err); }
 

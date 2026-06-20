@@ -22,6 +22,14 @@ function esc(v) {
     .replaceAll("'", "&#039;");
 }
 
+function normalizePhone(phone) {
+  return String(phone || "").replace(/\D/g, "");
+}
+
+function isValidPhone(phone) {
+  return /^\d{10,11}$/.test(phone || "");
+}
+
 function bindTabs() {
   document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -115,10 +123,14 @@ async function loadCustomers() {
       const c = customers.find((x) => x.id === id);
       if (!c) return;
       const name = prompt("Ten", c.name);
-      const phone = prompt("Phone", c.phone);
+      const phone = normalizePhone(prompt("Phone", c.phone));
       const email = prompt("Email", c.email || "");
       const zalo = prompt("Zalo", c.zalo || "");
       if (!name || !phone) return;
+      if (!isValidPhone(phone)) {
+        alert("Phone phai gom 10-11 chu so.");
+        return;
+      }
       try {
         await api(`/api/customers/${id}`, {
           method: "PUT",
@@ -239,8 +251,12 @@ function bindAddButtons() {
 
   byId("add-customer").addEventListener("click", async () => {
     const name = prompt("Ten khach hang");
-    const phone = prompt("Phone");
+    const phone = normalizePhone(prompt("Phone"));
     if (!name || !phone) return;
+    if (!isValidPhone(phone)) {
+      alert("Phone phai gom 10-11 chu so.");
+      return;
+    }
     const email = prompt("Email") || "";
     const zalo = prompt("Zalo", phone) || phone;
     try {

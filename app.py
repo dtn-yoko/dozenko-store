@@ -24,6 +24,15 @@ def now_iso() -> str:
     return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
 
+def normalize_phone(phone: str) -> str:
+    return re.sub(r"\D", "", phone or "")
+
+
+def is_valid_vn_phone(phone: str) -> bool:
+    # Accept local VN style: 10-11 digits.
+    return bool(re.fullmatch(r"\d{10,11}", phone or ""))
+
+
 def get_connection() -> sqlite3.Connection:
     con = sqlite3.connect(DB_PATH)
     con.row_factory = sqlite3.Row
@@ -182,6 +191,17 @@ def admin_page():
     return send_from_directory(BASE_DIR, "admin.html")
 
 
+@app.route("/pay")
+@app.route("/thanh-toan")
+def pay_page_alias():
+    return send_from_directory(BASE_DIR, "pay.html")
+
+
+@app.route("/pay.html")
+def pay_page():
+    return send_from_directory(BASE_DIR, "pay.html")
+
+
 @app.route("/api/health")
 def health():
     return jsonify({"ok": True, "time": now_iso()})
@@ -307,7 +327,7 @@ def list_customers():
 def create_customer():
     data = request.get_json(silent=True) or {}
     name = (data.get("name") or "").strip()
-    phone = (data.get("phone") or "").strip()
+    phone = normalize_phone((data.get("phone") or "").strip())
     email = (data.get("email") or "").strip() or None
     zalo = (data.get("zalo") or phone).strip()
 
@@ -315,6 +335,8 @@ def create_customer():
         return jsonify({"error": "name is required"}), 400
     if not phone:
         return jsonify({"error": "phone is required"}), 400
+    if not is_valid_vn_phone(phone):
+        return jsonify({"error": "phone must be 10-11 digits"}), 400
 
     with closing(get_connection()) as con:
         cur = con.cursor()
@@ -352,13 +374,15 @@ def update_customer(customer_id: int):
             return jsonify({"error": "customer not found"}), 404
 
         name = (data.get("name", existing["name"]) or "").strip()
-        phone = (data.get("phone", existing["phone"]) or "").strip()
+        phone = normalize_phone((data.get("phone", existing["phone"]) or "").strip())
         email_val = data.get("email", existing["email"])
         email = (email_val or "").strip() or None
         zalo = (data.get("zalo", existing["zalo"]) or "").strip()
 
         if not name or not phone:
             return jsonify({"error": "name and phone are required"}), 400
+        if not is_valid_vn_phone(phone):
+            return jsonify({"error": "phone must be 10-11 digits"}), 400
 
         duplicate = cur.execute(
             "SELECT id FROM customers WHERE phone = ? AND id != ?", (phone, customer_id)

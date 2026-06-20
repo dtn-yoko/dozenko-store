@@ -210,7 +210,7 @@
 
         <div class="product-card reveal" id="product-blue">
           <div class="product-img-wrap">
-            <img src="rug-blue.jpg" alt="Thảm Hoa Xanh Đại Dương" class="product-img" loading="lazy" />
+            <img src="images/rug-blue.jpg" alt="Thảm Hoa Xanh Đại Dương" class="product-img" loading="lazy" />
             <div class="product-overlay">
               <a href="#order" class="overlay-btn" id="overlay-btn-blue">Đặt Màu Này</a>
             </div>
@@ -229,7 +229,7 @@
 
         <div class="product-card reveal reveal-delay-1" id="product-green">
           <div class="product-img-wrap">
-            <img src="rug-green.jpg" alt="Thảm Hoa Xanh Lá Rừng" class="product-img" loading="lazy" />
+            <img src="images/rug-green.jpg" alt="Thảm Hoa Xanh Lá Rừng" class="product-img" loading="lazy" />
             <div class="product-overlay">
               <a href="#order" class="overlay-btn" id="overlay-btn-green">Đặt Màu Này</a>
             </div>
@@ -248,7 +248,7 @@
 
         <div class="product-card reveal reveal-delay-2" id="product-orange">
           <div class="product-img-wrap">
-            <img src="rug-orange.jpg" alt="Thảm Hoa Cam Caramel" class="product-img" loading="lazy" />
+            <img src="images/rug-orange.jpg" alt="Thảm Hoa Cam Caramel" class="product-img" loading="lazy" />
             <div class="product-overlay">
               <a href="#order" class="overlay-btn" id="overlay-btn-orange">Đặt Màu Này</a>
             </div>
@@ -266,7 +266,7 @@
 
         <div class="product-card reveal reveal-delay-3" id="product-brown">
           <div class="product-img-wrap">
-            <img src="rug-brown.jpg" alt="Thảm Hoa Nâu Ấm" class="product-img" loading="lazy" />
+            <img src="images/rug-brown.jpg" alt="Thảm Hoa Nâu Ấm" class="product-img" loading="lazy" />
             <div class="product-overlay">
               <a href="#order" class="overlay-btn" id="overlay-btn-brown">Đặt Màu Này</a>
             </div>
@@ -757,7 +757,8 @@
 
           <div class="form-group">
             <label for="customer-whatsapp">Zalo / Điện Thoại</label>
-            <input type="tel" id="customer-whatsapp" name="phone" placeholder="0912 345 678" />
+            <input type="tel" id="customer-whatsapp" name="phone" placeholder="0912345678" inputmode="numeric" minlength="10" maxlength="11" pattern="[0-9]{10,11}" required />
+            <small>Nhap 10-11 chu so.</small>
           </div>
 
           <div class="form-group">
