@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 import re
+import json
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
@@ -78,6 +79,39 @@ def _extract_order_id_from_payload(data: dict[str, Any]) -> int | None:
     return None
 
 
+def _parse_amount(raw: Any) -> float | None:
+    if raw is None:
+        return None
+
+    if isinstance(raw, (int, float)):
+        return float(raw)
+
+    text = str(raw).strip()
+    if not text:
+        return None
+
+    # Keep digits and separators only, remove currency symbols and spaces.
+    text = re.sub(r"[^0-9,\.]", "", text)
+    if not text:
+        return None
+
+    # 2,000,000.50 -> remove thousand commas
+    if re.fullmatch(r"\d{1,3}(,\d{3})+(\.\d+)?", text):
+        return float(text.replace(",", ""))
+
+    # 2.000.000,50 -> remove thousand dots and normalize decimal comma
+    if re.fullmatch(r"\d{1,3}(\.\d{3})+(,\d+)?", text):
+        return float(text.replace(".", "").replace(",", "."))
+
+    # Plain integer or decimal with dot/comma.
+    if re.fullmatch(r"\d+", text):
+        return float(text)
+    if re.fullmatch(r"\d+[\.,]\d+", text):
+        return float(text.replace(",", "."))
+
+    return None
+
+
 def _extract_amount_from_payload(data: dict[str, Any]) -> float | None:
     amount_keys = [
         "amount",
@@ -91,21 +125,74 @@ def _extract_amount_from_payload(data: dict[str, Any]) -> float | None:
 
     for key in amount_keys:
         raw = data.get(key)
-        if raw is None:
-            continue
-        if isinstance(raw, (int, float)):
-            return float(raw)
-
-        text = str(raw).strip()
-        if not text:
-            continue
-
-        # Accept formats like 300000, 300,000, 300.000
-        normalized = text.replace(",", "").replace(".", "")
-        if normalized.isdigit():
-            return float(normalized)
+        parsed = _parse_amount(raw)
+        if parsed is not None:
+            return parsed
 
     return None
+
+
+def _extract_payload_candidates(data: dict[str, Any]) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = [data]
+
+    nested_data = data.get("data")
+    if isinstance(nested_data, dict):
+        candidates.append(nested_data)
+    elif isinstance(nested_data, list):
+        for item in nested_data:
+            if isinstance(item, dict):
+                candidates.append(item)
+
+    for key in ("transactions", "items", "records", "history"):
+        nested_list = data.get(key)
+        if isinstance(nested_list, list):
+            for item in nested_list:
+                if isinstance(item, dict):
+                    candidates.append(item)
+
+    # Deduplicate by object id while preserving order.
+    uniq: list[dict[str, Any]] = []
+    seen: set[int] = set()
+    for item in candidates:
+        item_id = id(item)
+        if item_id in seen:
+            continue
+        seen.add(item_id)
+        uniq.append(item)
+
+    return uniq
+
+
+def _log_webhook_event(status: str, payload: dict[str, Any], message: str) -> None:
+    with closing(get_connection()) as con:
+        con.execute(
+            """
+            INSERT INTO webhook_events(provider, status, payload, message, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            ("sepay", status, json.dumps(payload, ensure_ascii=False), message, now_iso()),
+        )
+        con.commit()
+
+
+def _process_webhook_payload(data: dict[str, Any]) -> tuple[int | None, str | None]:
+    candidates = _extract_payload_candidates(data)
+
+    # Prefer explicit order code match before amount fallback.
+    for candidate in candidates:
+        order_id = _extract_order_id_from_payload(candidate)
+        if order_id is not None:
+            return order_id, "order_code"
+
+    for candidate in candidates:
+        amount = _extract_amount_from_payload(candidate)
+        if amount is None:
+            continue
+        order_id = _find_pending_order_by_amount(amount)
+        if order_id is not None:
+            return order_id, "amount"
+
+    return None, None
 
 
 def _find_pending_order_by_amount(amount: float) -> int | None:
@@ -174,6 +261,19 @@ def init_db() -> None:
                 order_date TEXT NOT NULL,
                 FOREIGN KEY(customer_id) REFERENCES customers(id),
                 FOREIGN KEY(product_id) REFERENCES products(id)
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS webhook_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                provider TEXT NOT NULL,
+                status TEXT NOT NULL,
+                payload TEXT NOT NULL,
+                message TEXT,
+                created_at TEXT NOT NULL
             )
             """
         )
@@ -604,29 +704,25 @@ def delete_order(order_id: int):
 
 def webhook_sepay_helper(data):
     """Helper to process SePay webhook - updates order status"""
-    matched_by = "order_code"
-    order_id = _extract_order_id_from_payload(data)
-    if order_id is None:
-        amount = _extract_amount_from_payload(data)
-        if amount is None:
-            return jsonify({"error": "could not find order id or amount in webhook payload"}), 400
-        order_id = _find_pending_order_by_amount(amount)
-        if order_id is None:
-            return jsonify({"error": "no pending order matched transfer amount"}), 404
-        matched_by = "amount"
+    order_id, matched_by = _process_webhook_payload(data)
+    if order_id is None or matched_by is None:
+        _log_webhook_event("ignored", data, "could not find order id or amount match")
+        return jsonify({"error": "could not find order id or amount in webhook payload"}), 400
     
     with closing(get_connection()) as con:
         cur = con.cursor()
         existing = cur.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
         if not existing:
+            _log_webhook_event("ignored", data, f"order not found: {order_id}")
             return jsonify({"error": "order not found"}), 404
-        
+
         cur.execute(
             "UPDATE orders SET status = ? WHERE id = ?",
             ("success", order_id),
         )
         con.commit()
-    
+
+    _log_webhook_event("processed", data, f"order {order_id} marked success by {matched_by}")
     return jsonify({"ok": True, "order_id": order_id, "matched_by": matched_by}), 200
 
 
@@ -654,6 +750,20 @@ def webhook_sepay_test(order_id: int):
     """Test endpoint - simulates SePay webhook for testing"""
     data = {"referenceCode": f"ORD{order_id}", "description": f"ORD{order_id}"}
     return webhook_sepay_helper(data)
+
+
+@app.route("/api/webhook/events", methods=["GET"])
+def webhook_events():
+    with closing(get_connection()) as con:
+        rows = con.execute(
+            """
+            SELECT id, provider, status, message, created_at
+            FROM webhook_events
+            ORDER BY id DESC
+            LIMIT 50
+            """
+        ).fetchall()
+    return jsonify([row_to_dict(r) for r in rows])
 
 
 @app.route("/api/orders/<int:order_id>/confirm-payment", methods=["POST"])
