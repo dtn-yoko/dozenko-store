@@ -181,8 +181,21 @@ async function submitOrder(e) {
   const colors  = [...document.querySelectorAll('input[name="colors"]:checked')].map(cb => cb.value);
   const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
 
+  // Validate SĐT: bắt buộc nhập và phải đúng 10-11 số
+  if (!phone) {
+    showToast('Vui lòng nhập số điện thoại / Zalo!', 'error');
+    document.getElementById('customer-whatsapp').focus();
+    return;
+  }
+  const phoneDigits = phone.replace(/[^0-9]/g, '');
+  if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+    showToast('Số điện thoại phải có 10-11 chữ số! Vui lòng kiểm tra lại.', 'error');
+    document.getElementById('customer-whatsapp').focus();
+    return;
+  }
+
   if (colors.length === 0) {
-    showToast('Please select at least one color!', 'error');
+    showToast('Vui lòng chọn ít nhất 1 màu thảm!', 'error');
     return;
   }
 
@@ -293,8 +306,14 @@ async function submitOrderAndPay() {
   const colors  = [...document.querySelectorAll('input[name="colors"]:checked')].map(cb => cb.value);
 
   // Validate
-  if (!name) { showToast('Vui lòng nhập họ tên!', 'error'); return; }
-  if (!phone && !email) { showToast('Vui lòng nhập SĐT hoặc email!', 'error'); return; }
+  if (!name) { showToast('Vui lòng nhập họ tên!', 'error'); document.getElementById('customer-name').focus(); return; }
+  if (!phone) { showToast('Vui lòng nhập số điện thoại / Zalo!', 'error'); document.getElementById('customer-whatsapp').focus(); return; }
+  const phoneDigitsPay = phone.replace(/[^0-9]/g, '');
+  if (phoneDigitsPay.length < 10 || phoneDigitsPay.length > 11) {
+    showToast('Số điện thoại phải có 10-11 chữ số! Vui lòng kiểm tra lại.', 'error');
+    document.getElementById('customer-whatsapp').focus();
+    return;
+  }
   if (colors.length === 0) { showToast('Vui lòng chọn ít nhất 1 màu thảm!', 'error'); return; }
   if (!qty) { showToast('Vui lòng chọn số lượng!', 'error'); return; }
   if (!address) { showToast('Vui lòng nhập địa chỉ giao hàng!', 'error'); return; }
