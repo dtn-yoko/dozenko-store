@@ -1055,17 +1055,15 @@ def create_order():
             (order_id,),
         ).fetchone()
 
-    result = row_to_dict(row)
     if row["customer_email"]:
-        email_ok, email_msg = _send_order_confirmation_email(
+        _send_order_confirmation_email(
             customer_name=row["customer_name"],
             to_email=row["customer_email"],
             product_name=row["product_name"],
             amount=row["amount"],
         )
-        result["confirmation_email"] = {"sent": email_ok, "detail": email_msg}
 
-    return jsonify(result), 201
+    return jsonify(row_to_dict(row)), 201
 
 
 @app.route("/api/orders/<int:order_id>", methods=["GET"])
