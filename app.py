@@ -3,6 +3,9 @@ from __future__ import annotations
 import sqlite3
 import re
 import json
+import os
+import urllib.request
+import urllib.error
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +19,7 @@ import hashlib
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "brain.db"
+RESEND_CONFIG_PATH = BASE_DIR / "resend_config.txt"
 
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
 CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -45,6 +49,80 @@ def row_to_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
     if row is None:
         return None
     return {k: row[k] for k in row.keys()}
+
+
+def _load_resend_config() -> dict[str, str]:
+    config: dict[str, str] = {
+        "RESEND_API_KEY": os.getenv("RESEND_API_KEY", "").strip(),
+        "FROM_EMAIL": os.getenv("FROM_EMAIL", "").strip(),
+    }
+
+    # If both env vars are present, no need to read local file.
+    if config["RESEND_API_KEY"] and config["FROM_EMAIL"]:
+        return config
+
+    if not RESEND_CONFIG_PATH.exists():
+        return config
+
+    for raw_line in RESEND_CONFIG_PATH.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        parsed_key = key.strip()
+        parsed_value = value.strip()
+        if parsed_key and parsed_value and not config.get(parsed_key):
+            config[parsed_key] = parsed_value
+    return config
+
+
+def _send_resend_email(to_email: str, subject: str, html: str) -> tuple[bool, str]:
+    config = _load_resend_config()
+    api_key = config.get("RESEND_API_KEY", "")
+    from_email = config.get("FROM_EMAIL", "")
+
+    if not api_key or not from_email:
+        return False, "resend_config missing RESEND_API_KEY or FROM_EMAIL"
+
+    payload = {
+        "from": from_email,
+        "to": [to_email],
+        "subject": subject,
+        "html": html,
+    }
+
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            body = resp.read().decode("utf-8", errors="ignore")
+        parsed = json.loads(body) if body else {}
+        return True, str(parsed.get("id", "sent"))
+    except urllib.error.HTTPError as exc:
+        err_body = exc.read().decode("utf-8", errors="ignore")
+        return False, f"HTTP {exc.code}: {err_body}"
+    except Exception as exc:
+        return False, str(exc)
+
+
+def _send_welcome_email(customer_name: str, to_email: str) -> tuple[bool, str]:
+    safe_name = customer_name.strip() or "ban"
+    subject = "Dozenko da nhan thong tin cua ban"
+    html = (
+        f"<h3>Chao {safe_name},</h3>"
+        "<p>Dozenko da nhan thong tin cua ban thanh cong.</p>"
+        "<p>Cam on ban da dang ky. Chung minh se gui cap nhat som nhat qua email nay.</p>"
+        "<p>Than men,<br>Dozenko</p>"
+    )
+    return _send_resend_email(to_email=to_email, subject=subject, html=html)
 
 
 def _extract_order_id_from_payload(data: dict[str, Any]) -> int | None:
@@ -460,6 +538,11 @@ def create_customer():
         customer_id = cur.lastrowid
         con.commit()
         row = cur.execute("SELECT * FROM customers WHERE id = ?", (customer_id,)).fetchone()
+
+    # Send welcome email after successful new customer creation.
+    if email:
+        _send_welcome_email(name, email)
+
     return jsonify(row_to_dict(row)), 201
 
 
@@ -764,6 +847,40 @@ def webhook_events():
             """
         ).fetchall()
     return jsonify([row_to_dict(r) for r in rows])
+
+
+@app.route("/api/resend/status", methods=["GET"])
+def resend_status():
+    config = _load_resend_config()
+    from_email = config.get("FROM_EMAIL", "")
+    key_exists = bool(config.get("RESEND_API_KEY"))
+    return jsonify(
+        {
+            "configured": key_exists and bool(from_email),
+            "has_api_key": key_exists,
+            "from_email": from_email,
+            "sender_domain": from_email.split("@", 1)[1] if "@" in from_email else "",
+        }
+    )
+
+
+@app.route("/api/resend/test", methods=["POST"])
+def resend_test_email():
+    data = request.get_json(silent=True) or {}
+    to_email = (data.get("to_email") or "").strip().lower()
+    if not to_email:
+        return jsonify({"error": "to_email is required"}), 400
+
+    subject = "[Dozenko] Test ket noi Resend"
+    html = (
+        "<h3>Ket noi Resend thanh cong</h3>"
+        "<p>Neu ban nhan duoc email nay, domain va API key da hoat dong dung.</p>"
+        f"<p>Thoi gian: {now_iso()}</p>"
+    )
+    ok, detail = _send_resend_email(to_email=to_email, subject=subject, html=html)
+    if not ok:
+        return jsonify({"ok": False, "error": detail}), 502
+    return jsonify({"ok": True, "message_id": detail})
 
 
 @app.route("/api/orders/<int:order_id>/confirm-payment", methods=["POST"])
