@@ -5,7 +5,7 @@ import re
 import json
 import os
 from contextlib import closing
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +14,8 @@ from flask_cors import CORS
 import requests
 import hmac
 import hashlib
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -121,6 +123,293 @@ def _send_welcome_email(customer_name: str, to_email: str) -> tuple[bool, str]:
         "<p>Cam on ban da dang ky. Chung minh se gui cap nhat som nhat qua email nay.</p>"
         "<p>Than men,<br>Dozenko</p>"
     )
+    return _send_resend_email(to_email=to_email, subject=subject, html=html)
+
+
+def _get_payment_link() -> str:
+    """Get the payment/checkout link from config or environment"""
+    return os.getenv("PAYMENT_LINK", "https://dozenko.io.vn/thanh-toan").strip()
+
+
+def _is_test_email(email: str) -> bool:
+    """Check if email is in test mode (contains +test)"""
+    return "+test" in (email or "").lower()
+
+
+def _create_email_sequence(customer_id: int, customer_email: str, customer_name: str, is_test: bool) -> int:
+    """Create an email sequence record in the database"""
+    with closing(get_connection()) as con:
+        cur = con.cursor()
+        now = now_iso()
+        
+        # Schedule times for non-test mode
+        email2_scheduled = (datetime.utcnow() + timedelta(days=2)).replace(microsecond=0).isoformat() + "Z" if not is_test else now
+        email3_scheduled = (datetime.utcnow() + timedelta(days=3)).replace(microsecond=0).isoformat() + "Z" if not is_test else now
+        
+        cur.execute(
+            """
+            INSERT INTO email_sequences(
+                customer_id, customer_email, customer_name, sequence_type,
+                email2_scheduled_at, email3_scheduled_at, is_test_mode, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (customer_id, customer_email, customer_name, "waitlist", email2_scheduled, email3_scheduled, is_test, now)
+        )
+        con.commit()
+        return cur.lastrowid
+
+
+def _send_email1_and_schedule(customer_id: int, customer_email: str, customer_name: str, is_test: bool) -> tuple[bool, str]:
+    """Send Email 1 immediately and create sequence record"""
+    # Send Email 1
+    ok, msg = _send_email1_welcome(customer_name, customer_email)
+    if not ok:
+        return False, f"Failed to send Email 1: {msg}"
+    
+    # Create sequence record
+    seq_id = _create_email_sequence(customer_id, customer_email, customer_name, is_test)
+    
+    # Mark Email 1 as sent
+    with closing(get_connection()) as con:
+        cur = con.cursor()
+        cur.execute(
+            """
+            UPDATE email_sequences
+            SET email1_sent = 1, email1_sent_at = ?
+            WHERE id = ?
+            """,
+            (now_iso(), seq_id)
+        )
+        con.commit()
+    
+    return True, f"Email 1 sent, sequence created (ID: {seq_id})"
+
+
+def _process_pending_email_sequences() -> None:
+    """Background job to send scheduled emails"""
+    with closing(get_connection()) as con:
+        cur = con.cursor()
+        now = now_iso()
+        
+        # Email 2: Check sequences where email2 should be sent
+        pending_email2 = cur.execute(
+            """
+            SELECT id, customer_email, customer_name, email2_scheduled_at
+            FROM email_sequences
+            WHERE email2_sent = 0 AND email1_sent = 1 AND email2_scheduled_at <= ?
+            ORDER BY id ASC
+            """,
+            (now,)
+        ).fetchall()
+        
+        for row in pending_email2:
+            seq_id = row["id"]
+            email = row["customer_email"]
+            name = row["customer_name"]
+            
+            ok, msg = _send_email2_details(name, email)
+            if ok:
+                cur.execute(
+                    """
+                    UPDATE email_sequences
+                    SET email2_sent = 1, email2_sent_at = ?
+                    WHERE id = ?
+                    """,
+                    (now_iso(), seq_id)
+                )
+        
+        # Email 3: Check sequences where email3 should be sent
+        pending_email3 = cur.execute(
+            """
+            SELECT id, customer_email, customer_name, email3_scheduled_at
+            FROM email_sequences
+            WHERE email3_sent = 0 AND email2_sent = 1 AND email3_scheduled_at <= ?
+            ORDER BY id ASC
+            """,
+            (now,)
+        ).fetchall()
+        
+        for row in pending_email3:
+            seq_id = row["id"]
+            email = row["customer_email"]
+            name = row["customer_name"]
+            
+            ok, msg = _send_email3_cta(name, email)
+            if ok:
+                cur.execute(
+                    """
+                    UPDATE email_sequences
+                    SET email3_sent = 1, email3_sent_at = ?
+                    WHERE id = ?
+                    """,
+                    (now_iso(), seq_id)
+                )
+        
+        con.commit()
+
+
+def _send_all_emails_immediately(customer_id: int, customer_email: str, customer_name: str) -> tuple[bool, str]:
+    """Send all 3 emails immediately (test mode)"""
+    errors = []
+    
+    # Email 1
+    ok1, msg1 = _send_email1_welcome(customer_name, customer_email)
+    if not ok1:
+        errors.append(f"Email 1 failed: {msg1}")
+    
+    # Email 2
+    ok2, msg2 = _send_email2_details(customer_name, customer_email)
+    if not ok2:
+        errors.append(f"Email 2 failed: {msg2}")
+    
+    # Email 3
+    ok3, msg3 = _send_email3_cta(customer_name, customer_email)
+    if not ok3:
+        errors.append(f"Email 3 failed: {msg3}")
+    
+    if errors:
+        return False, " | ".join(errors)
+    
+    # Create sequence record and mark all as sent
+    seq_id = _create_email_sequence(customer_id, customer_email, customer_name, True)
+    with closing(get_connection()) as con:
+        cur = con.cursor()
+        now = now_iso()
+        cur.execute(
+            """
+            UPDATE email_sequences
+            SET email1_sent = 1, email1_sent_at = ?,
+                email2_sent = 1, email2_sent_at = ?,
+                email3_sent = 1, email3_sent_at = ?
+            WHERE id = ?
+            """,
+            (now, now, now, seq_id)
+        )
+        con.commit()
+    
+    return True, "All 3 emails sent immediately (test mode)"
+
+
+def _send_email1_welcome(customer_name: str, to_email: str) -> tuple[bool, str]:
+    """Email 1: Welcome email (sent immediately)"""
+    safe_name = customer_name.strip() or "bạn"
+    subject = "Chào bạn! Chúng mình nhận được yêu cầu của bạn 🌸"
+    html = f"""
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2>Chào {safe_name}!</h2>
+        
+        <p>Cảm ơn bạn đã quan tâm đến <strong>Thảm Hoa Dozenko</strong>!</p>
+        
+        <p>Chúng mình đã nhận được đơn đăng ký của bạn. Những tấm thảm thủ công này được chần tay từ cotton cao cấp, mềm mại và có họa tiết hoa độc đáo.</p>
+        
+        <p><strong>🎁 Chương Trình Đặc Biệt:</strong></p>
+        <ul>
+            <li>✨ Thảm 50cm × 120cm từ 300,000đ</li>
+            <li>🚚 Mua 2+ tặng miễn phí vận chuyển</li>
+            <li>🌸 4 màu sắc khác nhau có sẵn</li>
+        </ul>
+        
+        <p>Đội ngũ Dozenko sẽ gửi thêm thông tin chi tiết trong email tiếp theo. Hãy chú ý hộp thư của bạn!</p>
+        
+        <p>Nếu có bất kỳ câu hỏi nào, hãy liên hệ ngay với chúng mình.</p>
+        
+        <p>🌸 Thân mến,<br>
+        <strong>Đội Dozenko</strong></p>
+    </div>
+    """
+    return _send_resend_email(to_email=to_email, subject=subject, html=html)
+
+
+def _send_email2_details(customer_name: str, to_email: str) -> tuple[bool, str]:
+    """Email 2: Product details (sent after 2 days)"""
+    safe_name = customer_name.strip() or "bạn"
+    payment_link = _get_payment_link()
+    subject = "Khám phá bộ sưu tập thảm hoa Dozenko 🎨"
+    html = f"""
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2>Bộ Sưu Tập Dozenko - Nghệ Thuật Dưới Chân Bạn</h2>
+        
+        <p>Xin chào {safe_name},</p>
+        
+        <p>Sau khi bạn đăng ký, chúng mình muốn giới thiệu thêm về quy trình tạo ra mỗi tấm thảm của Dozenko.</p>
+        
+        <p><strong>🌸 Tại Sao Chọn Dozenko?</strong></p>
+        <ul>
+            <li><strong>100% Thủ Công:</strong> Mỗi tấm thảm được chần tay bởi các nghệ nhân</li>
+            <li><strong>Cotton Cao Cấp:</strong> Mềm mại, bền lâu, an toàn cho gia đình</li>
+            <li><strong>Họa Tiết Độc Đáo:</strong> Những mẫu hoa tươi sáng, mới lạ</li>
+            <li><strong>Đế Chống Trượt:</strong> Bảo vệ sàn nhà và an toàn cho trẻ em</li>
+        </ul>
+        
+        <p><strong>📏 Kích Thước & Giá:</strong></p>
+        <ul>
+            <li>50cm × 120cm: 300,000đ</li>
+            <li>Mua 2 tấm: 550,000đ (tiết kiệm 50,000đ)</li>
+            <li>Mua 3 tấm: 750,000đ (tiết kiệm 150,000đ)</li>
+            <li>Mua 4 tấm: 900,000đ (tiết kiệm 300,000đ)</li>
+        </ul>
+        
+        <p><strong>🎯 Giao Hàng Toàn Quốc</strong></p>
+        <p>Miễn phí vận chuyển khi mua 2+ tấm. Chúng mình giao trong 2-3 ngày làm việc.</p>
+        
+        <p>Chuẩn bị sẵn sàng để thay đổi không gian của bạn? 👇</p>
+        
+        <p style="text-align: center; margin-top: 30px;">
+            <a href="{payment_link}" style="background-color: #d4af5f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
+                ➤ Xem Bộ Sưu Tập & Đặt Hàng
+            </a>
+        </p>
+        
+        <p>🌸 Thân mến,<br>
+        <strong>Đội Dozenko</strong></p>
+    </div>
+    """
+    return _send_resend_email(to_email=to_email, subject=subject, html=html)
+
+
+def _send_email3_cta(customer_name: str, to_email: str) -> tuple[bool, str]:
+    """Email 3: Call to action (sent after 3 days total, 1 day after email 2)"""
+    safe_name = customer_name.strip() or "bạn"
+    payment_link = _get_payment_link()
+    subject = "Đặt hàng thảm Dozenko ngay - Hàng có hạn! ⚡"
+    html = f"""
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2>Hàng Còn Hạn - Đừng Bỏ Lỡ Cơ Hội! ⚡</h2>
+        
+        <p>Xin chào {safe_name},</p>
+        
+        <p>Bộ sưu tập Dozenko được yêu thích rất nhiều, và số lượng còn lại không nhiều.</p>
+        
+        <p><strong>🔥 Tại Sao Bạn Nên Đặt Hàng Ngay?</strong></p>
+        <ul>
+            <li>✅ Hàng còn hạn (chỉ 15 tấm với giá này)</li>
+            <li>✅ Mua 2+ tặng miễn phí vận chuyển</li>
+            <li>✅ Giao hàng nhanh (2-3 ngày làm việc)</li>
+            <li>✅ 100% thủ công, chất lượng đảm bảo</li>
+        </ul>
+        
+        <p><strong>😍 Khách Hàng Yêu Thích:</strong></p>
+        <p><em>"Thảm rất đẹp, mềm và bền. Toàn nhà tôi đều thích!"</em> - Chị Hà, Hà Nội</p>
+        <p><em>"Giao hàng nhanh, sản phẩm đúng như hình. Rất hài lòng!"</em> - Anh Minh, TP.HCM</p>
+        
+        <p><strong>⏰ Thời Gian Hạn Chế:</strong></p>
+        <p>Số lượng với giá khuyến mãi này sẽ hết rất nhanh. Bạn nên đặt hôm nay để không bỏ lỡ cơ hội!</p>
+        
+        <p style="text-align: center; margin-top: 30px;">
+            <a href="{payment_link}" style="background-color: #ff6b6b; color: white; padding: 14px 28px; font-size: 16px; font-weight: bold; text-decoration: none; border-radius: 4px; display: inline-block;">
+                ➤ ĐẶT HÀNG NGAY - HÀNG CÓ HẠN! ⚡
+            </a>
+        </p>
+        
+        <p style="margin-top: 20px; color: #666; font-size: 14px;">
+            Hoặc liên hệ với chúng mình qua Zalo: 0123 456 789 (hỗ trợ 24/7)
+        </p>
+        
+        <p>🌸 Thân mến,<br>
+        <strong>Đội Dozenko</strong></p>
+    </div>
+    """
     return _send_resend_email(to_email=to_email, subject=subject, html=html)
 
 
@@ -355,6 +644,29 @@ def init_db() -> None:
             """
         )
 
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS email_sequences (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_id INTEGER NOT NULL,
+                customer_email TEXT NOT NULL,
+                customer_name TEXT NOT NULL,
+                sequence_type TEXT DEFAULT 'waitlist',
+                email1_sent BOOLEAN DEFAULT 0,
+                email1_sent_at TEXT,
+                email2_sent BOOLEAN DEFAULT 0,
+                email2_scheduled_at TEXT,
+                email2_sent_at TEXT,
+                email3_sent BOOLEAN DEFAULT 0,
+                email3_scheduled_at TEXT,
+                email3_sent_at TEXT,
+                is_test_mode BOOLEAN DEFAULT 0,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(customer_id) REFERENCES customers(id)
+            )
+            """
+        )
+
         con.commit()
 
 
@@ -538,9 +850,19 @@ def create_customer():
         con.commit()
         row = cur.execute("SELECT * FROM customers WHERE id = ?", (customer_id,)).fetchone()
 
-    # Send welcome email after successful new customer creation.
+    # Send email sequence after successful new customer creation
     if email:
-        _send_welcome_email(name, email)
+        is_test = _is_test_email(email)
+        if is_test:
+            # Test mode: send all 3 emails immediately
+            ok, seq_msg = _send_all_emails_immediately(customer_id, email, name)
+        else:
+            # Normal mode: send Email 1 and schedule Emails 2 and 3
+            ok, seq_msg = _send_email1_and_schedule(customer_id, email, name, False)
+        
+        # Log the sequence info (optional - can be used for debugging)
+        if not ok:
+            print(f"⚠️  Email sequence error for {email}: {seq_msg}")
 
     return jsonify(row_to_dict(row)), 201
 
@@ -882,6 +1204,92 @@ def resend_test_email():
     return jsonify({"ok": True, "message_id": detail})
 
 
+@app.route("/api/email-sequences", methods=["GET"])
+def list_email_sequences():
+    """View all email sequences (for admin/testing)"""
+    with closing(get_connection()) as con:
+        rows = con.execute(
+            """
+            SELECT
+              id,
+              customer_id,
+              customer_email,
+              customer_name,
+              email1_sent,
+              email1_sent_at,
+              email2_sent,
+              email2_scheduled_at,
+              email2_sent_at,
+              email3_sent,
+              email3_scheduled_at,
+              email3_sent_at,
+              is_test_mode,
+              created_at
+            FROM email_sequences
+            ORDER BY id DESC
+            LIMIT 50
+            """
+        ).fetchall()
+    return jsonify([row_to_dict(r) for r in rows])
+
+
+@app.route("/api/email-sequences/<int:seq_id>", methods=["GET"])
+def get_email_sequence(seq_id: int):
+    """Get a specific email sequence (for debugging)"""
+    with closing(get_connection()) as con:
+        row = con.execute(
+            """
+            SELECT *
+            FROM email_sequences
+            WHERE id = ?
+            """,
+            (seq_id,)
+        ).fetchone()
+    if not row:
+        return jsonify({"error": "sequence not found"}), 404
+    return jsonify(row_to_dict(row))
+
+
+@app.route("/api/test-email-sequence", methods=["POST"])
+def test_email_sequence():
+    """Test email sequence by sending all 3 emails immediately"""
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip()
+    name = (data.get("name") or "Test Customer").strip()
+    
+    if not email:
+        return jsonify({"error": "email is required"}), 400
+    
+    # Create a temporary customer for testing
+    phone = "0123456789"
+    with closing(get_connection()) as con:
+        cur = con.cursor()
+        cur.execute(
+            """
+            INSERT OR IGNORE INTO customers(name, phone, email, zalo, signup_date)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (name, phone, email, phone, now_iso())
+        )
+        con.commit()
+        row = cur.execute(
+            "SELECT id FROM customers WHERE phone = ?", (phone,)
+        ).fetchone()
+        customer_id = row["id"]
+    
+    # Send all 3 emails immediately
+    ok, msg = _send_all_emails_immediately(customer_id, email, name)
+    if not ok:
+        return jsonify({"ok": False, "error": msg}), 502
+    
+    return jsonify({
+        "ok": True,
+        "message": msg,
+        "customer_id": customer_id,
+        "email": email
+    })
+
+
 @app.route("/api/orders/<int:order_id>/confirm-payment", methods=["POST"])
 def confirm_payment(order_id: int):
     """Admin endpoint to confirm payment received and update order status to success"""
@@ -919,7 +1327,33 @@ def confirm_payment(order_id: int):
             (order_id,),
         ).fetchone()
     return jsonify(row_to_dict(row))
+
+
+# Initialize database
 init_db()
+
+
+# Initialize background scheduler for email sequences
+def init_scheduler() -> None:
+    """Initialize APScheduler for background email jobs"""
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        _process_pending_email_sequences,
+        trigger=IntervalTrigger(minutes=1),
+        id="email_sequence_job",
+        name="Process pending email sequences",
+        replace_existing=True,
+    )
+    try:
+        scheduler.start()
+        print("✅ Email sequence scheduler started")
+    except Exception as e:
+        print(f"⚠️  Scheduler already running or error: {e}")
+
+
+# Avoid starting scheduler in debug reload
+if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not app.debug:
+    init_scheduler()
 
 
 if __name__ == "__main__":
