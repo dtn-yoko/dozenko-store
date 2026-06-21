@@ -126,6 +126,28 @@ def _send_welcome_email(customer_name: str, to_email: str) -> tuple[bool, str]:
     return _send_resend_email(to_email=to_email, subject=subject, html=html)
 
 
+def _send_order_confirmation_email(customer_name: str, to_email: str, product_name: str, amount: float) -> tuple[bool, str]:
+    """Send order confirmation email when a new order is created."""
+    if not to_email:
+        return False, "missing customer email"
+    safe_name = customer_name.strip() or "bạn"
+    amount_str = f"{amount:,.0f}".replace(",", ".")
+    subject = f"Dozenko đã nhận đơn hàng của bạn - {product_name} 🌸"
+    html = (
+        f"<h2>Chào {safe_name}!</h2>"
+        f"<p>Cảm ơn bạn đã đặt hàng tại <strong>Dozenko</strong>. Đơn hàng của bạn đã được ghi nhận:</p>"
+        f"<ul>"
+        f"<li><strong>Sản phẩm:</strong> {product_name}</li>"
+        f"<li><strong>Số tiền:</strong> {amount_str}đ</li>"
+        f"</ul>"
+        f"<p>Sau khi xác nhận thanh toán, đội ngũ Dozenko sẽ đóng gói và gửi thảm đến bạn trong thời gian sớm nhất. "
+        f"Chúng mình sẽ liên hệ qua điện thoại/Zalo để xác nhận địa chỉ nhận hàng.</p>"
+        f"<p>Nếu có bất kỳ câu hỏi nào, hãy liên hệ ngay với chúng mình.</p>"
+        f"<p>🌸 Thân mến,<br><strong>Đội Dozenko</strong></p>"
+    )
+    return _send_resend_email(to_email=to_email, subject=subject, html=html)
+
+
 def _get_payment_link() -> str:
     """Get the payment/checkout link from config or environment"""
     return os.getenv("PAYMENT_LINK", "https://dozenko.io.vn/thanh-toan").strip()
@@ -1022,6 +1044,7 @@ def create_order():
               o.order_date,
               c.name AS customer_name,
               c.phone AS customer_phone,
+              c.email AS customer_email,
               p.name AS product_name,
               p.type AS product_type
             FROM orders o
@@ -1031,6 +1054,15 @@ def create_order():
             """,
             (order_id,),
         ).fetchone()
+
+    if row["customer_email"]:
+        _send_order_confirmation_email(
+            customer_name=row["customer_name"],
+            to_email=row["customer_email"],
+            product_name=row["product_name"],
+            amount=row["amount"],
+        )
+
     return jsonify(row_to_dict(row)), 201
 
 
