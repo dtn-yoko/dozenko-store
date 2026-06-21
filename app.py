@@ -4,8 +4,6 @@ import sqlite3
 import re
 import json
 import os
-import urllib.request
-import urllib.error
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
@@ -13,6 +11,7 @@ from typing import Any
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
+import requests
 import hmac
 import hashlib
 
@@ -91,24 +90,24 @@ def _send_resend_email(to_email: str, subject: str, html: str) -> tuple[bool, st
         "html": html,
     }
 
-    req = urllib.request.Request(
-        "https://api.resend.com/emails",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            body = resp.read().decode("utf-8", errors="ignore")
-        parsed = json.loads(body) if body else {}
+        resp = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "DozenkoCRM/1.0",
+            },
+            json=payload,
+            timeout=20,
+        )
+
+        if not resp.ok:
+            return False, f"HTTP {resp.status_code}: {resp.text}"
+
+        parsed = resp.json() if resp.text else {}
         return True, str(parsed.get("id", "sent"))
-    except urllib.error.HTTPError as exc:
-        err_body = exc.read().decode("utf-8", errors="ignore")
-        return False, f"HTTP {exc.code}: {err_body}"
     except Exception as exc:
         return False, str(exc)
 
