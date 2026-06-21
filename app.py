@@ -250,44 +250,57 @@ def _process_pending_email_sequences() -> None:
 
 
 def _send_all_emails_immediately(customer_id: int, customer_email: str, customer_name: str) -> tuple[bool, str]:
-    """Send all 3 emails immediately (test mode)"""
+    """Send all 3 emails immediately (test mode) with delay to avoid Resend rate limit (2 req/s)."""
+    import time as _time
+
+    # Create sequence record first so we can track partial success
+    seq_id = _create_email_sequence(customer_id, customer_email, customer_name, True)
+
     errors = []
-    
+
     # Email 1
     ok1, msg1 = _send_email1_welcome(customer_name, customer_email)
-    if not ok1:
+    if ok1:
+        with closing(get_connection()) as con:
+            con.execute(
+                "UPDATE email_sequences SET email1_sent=1, email1_sent_at=? WHERE id=?",
+                (now_iso(), seq_id),
+            )
+            con.commit()
+    else:
         errors.append(f"Email 1 failed: {msg1}")
-    
+
+    _time.sleep(0.6)  # Stay under 2 req/s Resend limit
+
     # Email 2
     ok2, msg2 = _send_email2_details(customer_name, customer_email)
-    if not ok2:
+    if ok2:
+        with closing(get_connection()) as con:
+            con.execute(
+                "UPDATE email_sequences SET email2_sent=1, email2_sent_at=? WHERE id=?",
+                (now_iso(), seq_id),
+            )
+            con.commit()
+    else:
         errors.append(f"Email 2 failed: {msg2}")
-    
+
+    _time.sleep(0.6)
+
     # Email 3
     ok3, msg3 = _send_email3_cta(customer_name, customer_email)
-    if not ok3:
+    if ok3:
+        with closing(get_connection()) as con:
+            con.execute(
+                "UPDATE email_sequences SET email3_sent=1, email3_sent_at=? WHERE id=?",
+                (now_iso(), seq_id),
+            )
+            con.commit()
+    else:
         errors.append(f"Email 3 failed: {msg3}")
-    
+
     if errors:
         return False, " | ".join(errors)
-    
-    # Create sequence record and mark all as sent
-    seq_id = _create_email_sequence(customer_id, customer_email, customer_name, True)
-    with closing(get_connection()) as con:
-        cur = con.cursor()
-        now = now_iso()
-        cur.execute(
-            """
-            UPDATE email_sequences
-            SET email1_sent = 1, email1_sent_at = ?,
-                email2_sent = 1, email2_sent_at = ?,
-                email3_sent = 1, email3_sent_at = ?
-            WHERE id = ?
-            """,
-            (now, now, now, seq_id)
-        )
-        con.commit()
-    
+
     return True, "All 3 emails sent immediately (test mode)"
 
 
