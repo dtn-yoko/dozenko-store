@@ -38,6 +38,10 @@ function isValidPhone(phone) {
   return /^\d{10,11}$/.test(phone || '');
 }
 
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || '').trim());
+}
+
 // ===== GOOGLE SHEETS CONFIG =====
 const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzEhMyargcqODgUhuiQu3J5F-47uB8X_wOOGARLaLanBcii_vdpxfTK_caVmTDhYts7Zg/exec';
 
@@ -194,6 +198,10 @@ async function submitOrder(e) {
     showToast('Please select at least one color!', 'error');
     return;
   }
+  if (!isValidEmail(email)) {
+    showToast('Email khong hop le. Vui long kiem tra lai.', 'error');
+    return;
+  }
   if (!isValidPhone(phone)) {
     showToast('So dien thoai phai gom 10-11 chu so.', 'error');
     return;
@@ -308,7 +316,7 @@ async function submitOrderAndPay() {
 
   // Validate
   if (!name) { showToast('Vui lòng nhập họ tên!', 'error'); return; }
-  if (!email) { showToast('Vui long nhap email!', 'error'); return; }
+  if (!isValidEmail(email)) { showToast('Email khong hop le. Vui long kiem tra lai.', 'error'); return; }
   if (!isValidPhone(phone)) { showToast('So dien thoai phai gom 10-11 chu so.', 'error'); return; }
   if (colors.length === 0) { showToast('Vui lòng chọn ít nhất 1 màu thảm!', 'error'); return; }
   if (!qty) { showToast('Vui lòng chọn số lượng!', 'error'); return; }

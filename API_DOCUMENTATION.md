@@ -239,7 +239,7 @@ CREATE TABLE email_sequences (
 
 ### Required Configuration (resend_config.txt)
 ```
-RESEND_API_KEY=re_HWLGTnaA_MBVwsN98ZbXPjjxMYNLUo2kw
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxx (lấy từ Resend dashboard, không commit giá trị thật)
 FROM_EMAIL=hi@dozenko.io.vn
 ```
 

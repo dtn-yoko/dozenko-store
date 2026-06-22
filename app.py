@@ -157,6 +157,10 @@ def is_valid_vn_phone(phone: str) -> bool:
     return bool(re.fullmatch(r"\d{10,11}", phone or ""))
 
 
+def is_valid_email(email: str) -> bool:
+    return bool(re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email or ""))
+
+
 def get_connection() -> sqlite3.Connection:
     con = sqlite3.connect(DB_PATH, timeout=30)
     con.row_factory = sqlite3.Row
@@ -981,6 +985,8 @@ def create_customer():
         return jsonify({"error": "phone is required"}), 400
     if not is_valid_vn_phone(phone):
         return jsonify({"error": "phone must be 10-11 digits"}), 400
+    if email and not is_valid_email(email):
+        return jsonify({"error": "email is not a valid email address"}), 400
 
     with closing(get_connection()) as con:
         cur = con.cursor()
@@ -1043,6 +1049,8 @@ def update_customer(customer_id: int):
             return jsonify({"error": "name and phone are required"}), 400
         if not is_valid_vn_phone(phone):
             return jsonify({"error": "phone must be 10-11 digits"}), 400
+        if email and not is_valid_email(email):
+            return jsonify({"error": "email is not a valid email address"}), 400
 
         duplicate = cur.execute(
             "SELECT id FROM customers WHERE phone = ? AND id != ?", (phone, customer_id)

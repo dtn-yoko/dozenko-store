@@ -1,0 +1,6 @@
+.env
+resend_config.txt
+__pycache__/
+*.pyc
+*.snapshot.db
+backups/
