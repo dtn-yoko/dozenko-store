@@ -5,6 +5,8 @@ import re
 import json
 import os
 import shutil
+import base64
+import threading
 from contextlib import closing
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -36,6 +38,93 @@ def _ensure_db_file() -> None:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     if not DB_PATH.exists() and SEED_DB_PATH.exists():
         shutil.copy(SEED_DB_PATH, DB_PATH)
+
+
+# --- GitHub-as-storage backup: free workaround for Render's ephemeral disk on
+# the free plan. Pulls the latest brain.db backup on boot, pushes a fresh
+# backup on an interval while running. No-ops if GITHUB_TOKEN isn't set.
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
+GITHUB_REPO = os.getenv("GITHUB_REPO", "dtn-yoko/dozenko-store").strip()
+GITHUB_BACKUP_BRANCH = os.getenv("GITHUB_BACKUP_BRANCH", "db-backup").strip()
+GITHUB_BACKUP_PATH = os.getenv("GITHUB_BACKUP_PATH", "brain.db").strip()
+
+
+def _github_api_url() -> str:
+    return f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_BACKUP_PATH}"
+
+
+def _github_headers() -> dict[str, str]:
+    return {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "DozenkoCRM/1.0",
+    }
+
+
+def restore_db_from_github() -> None:
+    """Download the latest brain.db backup from GITHUB_BACKUP_BRANCH on boot."""
+    if not GITHUB_TOKEN:
+        return
+    try:
+        resp = requests.get(
+            _github_api_url(),
+            headers=_github_headers(),
+            params={"ref": GITHUB_BACKUP_BRANCH},
+            timeout=20,
+        )
+        if not resp.ok:
+            print(f"[db-backup] restore skipped: HTTP {resp.status_code}")
+            return
+        content_b64 = resp.json().get("content", "")
+        if not content_b64:
+            return
+        data = base64.b64decode(content_b64)
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        DB_PATH.write_bytes(data)
+        print("[db-backup] restored brain.db from GitHub backup")
+    except Exception as exc:
+        print(f"[db-backup] restore failed: {exc}")
+
+
+def backup_db_to_github_async() -> None:
+    """Fire-and-forget backup so request handlers don't wait on GitHub's API."""
+    if not GITHUB_TOKEN:
+        return
+    threading.Thread(target=backup_db_to_github, daemon=True).start()
+
+
+def backup_db_to_github() -> None:
+    """Push the current brain.db to GITHUB_BACKUP_BRANCH so it survives restarts."""
+    if not GITHUB_TOKEN or not DB_PATH.exists():
+        return
+    try:
+        get_resp = requests.get(
+            _github_api_url(),
+            headers=_github_headers(),
+            params={"ref": GITHUB_BACKUP_BRANCH},
+            timeout=20,
+        )
+        sha = get_resp.json().get("sha") if get_resp.ok else None
+
+        content_b64 = base64.b64encode(DB_PATH.read_bytes()).decode("ascii")
+        payload = {
+            "message": f"chore: auto-backup brain.db {now_iso()}",
+            "content": content_b64,
+            "branch": GITHUB_BACKUP_BRANCH,
+        }
+        if sha:
+            payload["sha"] = sha
+
+        put_resp = requests.put(
+            _github_api_url(),
+            headers=_github_headers(),
+            json=payload,
+            timeout=20,
+        )
+        if not put_resp.ok:
+            print(f"[db-backup] push failed: HTTP {put_resp.status_code}: {put_resp.text}")
+    except Exception as exc:
+        print(f"[db-backup] push failed: {exc}")
 
 
 def now_iso() -> str:
@@ -911,6 +1000,7 @@ def create_customer():
         if not ok:
             print(f"⚠️  Email sequence error for {email}: {seq_msg}")
 
+    backup_db_to_github_async()
     return jsonify(row_to_dict(row)), 201
 
 
@@ -1075,6 +1165,7 @@ def create_order():
             amount=row["amount"],
         )
 
+    backup_db_to_github_async()
     return jsonify(row_to_dict(row)), 201
 
 
@@ -1184,6 +1275,7 @@ def webhook_sepay_helper(data):
         con.commit()
 
     _log_webhook_event("processed", data, f"order {order_id} marked success by {matched_by}")
+    backup_db_to_github_async()
     return jsonify({"ok": True, "order_id": order_id, "matched_by": matched_by}), 200
 
 
@@ -1383,11 +1475,13 @@ def confirm_payment(order_id: int):
             """,
             (order_id,),
         ).fetchone()
+    backup_db_to_github_async()
     return jsonify(row_to_dict(row))
 
 
 # Initialize database
 _ensure_db_file()
+restore_db_from_github()
 init_db()
 
 
@@ -1400,6 +1494,13 @@ def init_scheduler() -> None:
         trigger=IntervalTrigger(minutes=1),
         id="email_sequence_job",
         name="Process pending email sequences",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        backup_db_to_github,
+        trigger=IntervalTrigger(minutes=3),
+        id="db_backup_job",
+        name="Backup brain.db to GitHub",
         replace_existing=True,
     )
     try:

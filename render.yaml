@@ -8,9 +8,5 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
-      - key: DB_PATH
-        value: /var/data/brain.db
-    disk:
-      name: dozenko-data
-      mountPath: /var/data
-      sizeGB: 1
+      # GITHUB_TOKEN, GITHUB_REPO: set in Render dashboard (not committed here).
+      # Required for brain.db to survive free-plan restarts via GitHub backup.
