@@ -4,6 +4,7 @@ import sqlite3
 import re
 import json
 import os
+import shutil
 from contextlib import closing
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -19,11 +20,22 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "brain.db"
+SEED_DB_PATH = BASE_DIR / "brain.db"
+DB_PATH = Path(os.getenv("DB_PATH", str(SEED_DB_PATH)))
 RESEND_CONFIG_PATH = BASE_DIR / "resend_config.txt"
 
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
 CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+
+def _ensure_db_file() -> None:
+    """If DB_PATH points to a persistent disk that's still empty (first boot),
+    seed it from the repo's bundled brain.db so products/brand-voice survive."""
+    if DB_PATH == SEED_DB_PATH:
+        return
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if not DB_PATH.exists() and SEED_DB_PATH.exists():
+        shutil.copy(SEED_DB_PATH, DB_PATH)
 
 
 def now_iso() -> str:
@@ -1375,6 +1387,7 @@ def confirm_payment(order_id: int):
 
 
 # Initialize database
+_ensure_db_file()
 init_db()
 
 

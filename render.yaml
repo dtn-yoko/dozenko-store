@@ -8,3 +8,9 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: DB_PATH
+        value: /var/data/brain.db
+    disk:
+      name: dozenko-data
+      mountPath: /var/data
+      sizeGB: 1
