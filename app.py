@@ -93,6 +93,23 @@ def backup_db_to_github_async() -> None:
     threading.Thread(target=backup_db_to_github, daemon=True).start()
 
 
+def _snapshot_db_bytes() -> bytes:
+    """Use SQLite's online backup API for a consistent snapshot instead of
+    reading the raw file, which can race with concurrent writers (esp. WAL)."""
+    snapshot_path = DB_PATH.with_suffix(".snapshot.db")
+    src = sqlite3.connect(DB_PATH, timeout=30)
+    try:
+        dst = sqlite3.connect(snapshot_path)
+        try:
+            src.backup(dst)
+        finally:
+            dst.close()
+        return snapshot_path.read_bytes()
+    finally:
+        src.close()
+        snapshot_path.unlink(missing_ok=True)
+
+
 def backup_db_to_github() -> None:
     """Push the current brain.db to GITHUB_BACKUP_BRANCH so it survives restarts."""
     if not GITHUB_TOKEN or not DB_PATH.exists():
@@ -106,7 +123,7 @@ def backup_db_to_github() -> None:
         )
         sha = get_resp.json().get("sha") if get_resp.ok else None
 
-        content_b64 = base64.b64encode(DB_PATH.read_bytes()).decode("ascii")
+        content_b64 = base64.b64encode(_snapshot_db_bytes()).decode("ascii")
         payload = {
             "message": f"chore: auto-backup brain.db {now_iso()}",
             "content": content_b64,
@@ -141,9 +158,11 @@ def is_valid_vn_phone(phone: str) -> bool:
 
 
 def get_connection() -> sqlite3.Connection:
-    con = sqlite3.connect(DB_PATH)
+    con = sqlite3.connect(DB_PATH, timeout=30)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA foreign_keys = ON")
+    con.execute("PRAGMA journal_mode = WAL")
+    con.execute("PRAGMA busy_timeout = 30000")
     return con
 
 
