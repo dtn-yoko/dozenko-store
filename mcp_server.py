@@ -6,12 +6,21 @@ from typing import Any
 
 import requests
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.server import TransportSecuritySettings
 
 CRM_API_BASE = os.getenv("CRM_API_BASE", "http://127.0.0.1:8000").rstrip("/")
 MCP_API_KEY = os.getenv("MCP_API_KEY", "").strip()
 MCP_PORT = int(os.getenv("MCP_PORT", "8001"))
+MCP_PUBLIC_HOST = os.getenv("MCP_PUBLIC_HOST", "mcp.dozenko.io.vn").strip()
 
-mcp = FastMCP("dozenko-crm")
+mcp = FastMCP(
+    "dozenko-crm",
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=["127.0.0.1:*", "localhost:*", MCP_PUBLIC_HOST],
+        allowed_origins=["http://127.0.0.1:*", "http://localhost:*", f"https://{MCP_PUBLIC_HOST}"],
+    ),
+)
 
 
 def _api_get(path: str) -> Any:
