@@ -5,6 +5,7 @@ __pycache__/
 *.snapshot.db
 backups/
 brain.db
+venv/
 deploy_tools/keys/
 deploy_tools/ssh_exec.py
 deploy_tools/sftp_put.py
