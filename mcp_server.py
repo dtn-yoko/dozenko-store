@@ -35,6 +35,12 @@ def _api_post(path: str, json_body: dict | None = None) -> Any:
     return resp.json()
 
 
+def _api_put(path: str, json_body: dict | None = None) -> Any:
+    resp = requests.put(f"{CRM_API_BASE}{path}", json=json_body or {}, timeout=15)
+    resp.raise_for_status()
+    return resp.json()
+
+
 @mcp.tool()
 def get_daily_summary(date: str | None = None) -> dict:
     """Tổng kết doanh số trong 1 ngày: số đơn theo trạng thái, tổng tiền, khách mới,
@@ -111,6 +117,18 @@ def check_low_stock(threshold: int = 5) -> dict:
         if p.get("type") == "physical" and p.get("quantity") is not None and p["quantity"] <= threshold
     ]
     return {"threshold": threshold, "low_stock_products": low_stock, "count": len(low_stock)}
+
+
+@mcp.tool()
+def update_hero_text(text: str, field: str = "hero_title") -> dict:
+    """Đổi tiêu đề hoặc mô tả ngắn (hero) trên trang chủ dozenko.io.vn.
+    `field` là 'hero_title' (tiêu đề lớn) hoặc 'hero_subtitle' (mô tả dưới tiêu đề).
+    Thay đổi có hiệu lực ngay khi khách load lại trang, không cần deploy lại.
+    """
+    if field not in {"hero_title", "hero_subtitle"}:
+        return {"ok": False, "error": "field phải là 'hero_title' hoặc 'hero_subtitle'"}
+    result = _api_put(f"/api/content/{field}", {"value": text})
+    return {"ok": True, "content": result}
 
 
 def _build_auth_app():

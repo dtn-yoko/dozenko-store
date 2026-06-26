@@ -46,3 +46,11 @@ có sẵn — MCP server chỉ gọi qua HTTP, không cần sửa backend.
   - "kiểm tra tồn kho giúp"
   - "còn dưới 3 cái thì báo tôi"
   - "thảm màu xanh còn bao nhiêu"
+
+## 4. update_hero_text (thêm sau, ngoài 3 cái ban đầu)
+
+- **Input:** `text` (string), `field` (string: `hero_title` hoặc `hero_subtitle`, default `hero_title`)
+- **Output:** nội dung mới đã lưu + thời gian cập nhật
+- **Tình huống dùng:** đổi tiêu đề/mô tả trang chủ ngay qua Telegram khi chạy campaign (ví dụ "Flash sale cuối tuần 30%") mà không cần sửa code/deploy lại.
+- **Độ ưu tiên:** bổ sung theo yêu cầu thực tế phát sinh khi test MCP qua goClaw
+- **Nguồn dữ liệu:** bảng mới `site_content` (key-value) trong `brain.db` + `PUT /api/content/<key>`. Trang chủ (`index.html`/`script.js`) load override này lúc page load — không cần deploy lại để thấy thay đổi.

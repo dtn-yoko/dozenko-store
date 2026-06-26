@@ -805,6 +805,16 @@ def init_db() -> None:
 
         cur.execute(
             """
+            CREATE TABLE IF NOT EXISTS site_content (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+
+        cur.execute(
+            """
             CREATE TABLE IF NOT EXISTS email_sequences (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 customer_id INTEGER NOT NULL,
@@ -853,6 +863,53 @@ def pay_page():
 @app.route("/api/health")
 def health():
     return jsonify({"ok": True, "time": now_iso()})
+
+
+# Whitelist of editable content keys -> the static fallback text shown if no
+# override is stored yet. Keeps this endpoint from becoming an arbitrary
+# key-value store for unrelated data.
+EDITABLE_CONTENT_KEYS = {"hero_title", "hero_subtitle"}
+
+
+@app.route("/api/content", methods=["GET"])
+def list_content():
+    with closing(get_connection()) as con:
+        rows = con.execute("SELECT * FROM site_content").fetchall()
+    return jsonify([row_to_dict(r) for r in rows])
+
+
+@app.route("/api/content/<key>", methods=["GET"])
+def get_content(key: str):
+    with closing(get_connection()) as con:
+        row = con.execute("SELECT * FROM site_content WHERE key = ?", (key,)).fetchone()
+    if not row:
+        return jsonify({"error": "key not found"}), 404
+    return jsonify(row_to_dict(row))
+
+
+@app.route("/api/content/<key>", methods=["PUT"])
+def update_content(key: str):
+    if key not in EDITABLE_CONTENT_KEYS:
+        return jsonify({"error": f"key must be one of {sorted(EDITABLE_CONTENT_KEYS)}"}), 400
+
+    data = request.get_json(silent=True) or {}
+    value = (data.get("value") or "").strip()
+    if not value:
+        return jsonify({"error": "value is required"}), 400
+
+    with closing(get_connection()) as con:
+        con.execute(
+            """
+            INSERT INTO site_content(key, value, updated_at) VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+            """,
+            (key, value, now_iso()),
+        )
+        con.commit()
+        row = con.execute("SELECT * FROM site_content WHERE key = ?", (key,)).fetchone()
+
+    backup_db_to_github_async()
+    return jsonify(row_to_dict(row))
 
 
 @app.route("/api/products", methods=["GET"])

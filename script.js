@@ -30,6 +30,32 @@ function ensureCrmConfigured() {
   return false;
 }
 
+// Loads editable hero text overrides (set via the update_hero_text MCP tool
+// or PUT /api/content/<key>). Silently keeps the static HTML if nothing is
+// stored yet or the request fails.
+async function loadContentOverrides() {
+  if (!CRM_API_BASE) return;
+  try {
+    const res = await fetch(`${CRM_API_BASE}/api/content`, { headers: CRM_FETCH_HEADERS });
+    if (!res.ok) return;
+    const rows = await res.json();
+    for (const row of rows) {
+      if (row.key === 'hero_title') {
+        const el = document.getElementById('hero-title-text');
+        if (el) el.textContent = row.value;
+      }
+      if (row.key === 'hero_subtitle') {
+        const el = document.getElementById('hero-subtitle-text');
+        if (el) el.textContent = row.value;
+      }
+    }
+  } catch (_) {
+    // Static HTML stays as-is on any failure.
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadContentOverrides);
+
 function normalizePhone(phone) {
   return String(phone || '').replace(/\D/g, '');
 }
