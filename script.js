@@ -14,7 +14,7 @@ const CRM_API_BASE = (() => {
   }
 
   if (host === 'dozenko.io.vn' || host.endsWith('.dozenko.io.vn')) {
-    return 'https://dozenko-crm.onrender.com';
+    return window.location.origin;
   }
 
   // On static production hosts (e.g. GitHub Pages), API base must be configured explicitly.
