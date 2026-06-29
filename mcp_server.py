@@ -119,6 +119,40 @@ def check_low_stock(threshold: int = 5) -> dict:
     return {"threshold": threshold, "low_stock_products": low_stock, "count": len(low_stock)}
 
 
+def _format_amount(amount: float) -> str:
+    if amount >= 1000:
+        return f"{amount / 1000:.0f}k" if amount % 1000 == 0 else f"{amount / 1000:.1f}k"
+    return str(int(amount))
+
+
+@mcp.tool()
+def check_new_orders(minutes: int = 15) -> dict:
+    """Kiểm tra đơn hàng mới trong `minutes` phút gần đây (mặc định 15) mà chưa được
+    báo qua Telegram. Mỗi đơn chỉ được trả về 1 lần (tự đánh dấu đã nhắn). Dùng để
+    agent tự động nhắn khi có đơn mới: "Đơn mới: chị Hà, 450k, 2 sản phẩm. Tổng hôm nay: 3 đơn."
+    """
+    result = _api_get(f"/api/orders/new-alerts?minutes={minutes}")
+    orders = result.get("orders", [])
+    total_today = result.get("total_orders_today", 0)
+
+    if not orders:
+        return {"has_new": False, "orders": [], "total_orders_today": total_today, "message": None}
+
+    lines = []
+    for o in orders:
+        lines.append(
+            f"Đơn mới: {o['customer_name']}, {_format_amount(o['amount'])}, {o['product_name']}."
+        )
+    lines.append(f"Tổng hôm nay: {total_today} đơn.")
+
+    return {
+        "has_new": True,
+        "orders": orders,
+        "total_orders_today": total_today,
+        "message": " ".join(lines),
+    }
+
+
 @mcp.tool()
 def update_hero_text(text: str, field: str = "hero_title") -> dict:
     """Đổi tiêu đề hoặc mô tả ngắn (hero) trên trang chủ dozenko.io.vn.

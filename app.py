@@ -790,6 +790,12 @@ def init_db() -> None:
             """
         )
 
+        # Add notified_at column to existing databases that were created without it
+        try:
+            cur.execute("ALTER TABLE orders ADD COLUMN notified_at TEXT")
+        except Exception:
+            pass  # Column already exists
+
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS webhook_events (
@@ -1174,6 +1180,60 @@ def list_orders():
     with closing(get_connection()) as con:
         rows = con.execute(sql).fetchall()
     return jsonify([row_to_dict(r) for r in rows])
+
+
+@app.route("/api/orders/new-alerts", methods=["GET"])
+def get_new_order_alerts():
+    try:
+        minutes = int(request.args.get("minutes", 15))
+    except (TypeError, ValueError):
+        minutes = 15
+
+    cutoff = (datetime.utcnow() - timedelta(minutes=minutes)).replace(microsecond=0).isoformat() + "Z"
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+
+    with closing(get_connection()) as con:
+        cur = con.cursor()
+        new_rows = cur.execute(
+            """
+            SELECT
+              o.id,
+              o.amount,
+              o.order_date,
+              c.name AS customer_name,
+              p.name AS product_name
+            FROM orders o
+            JOIN customers c ON c.id = o.customer_id
+            JOIN products p ON p.id = o.product_id
+            WHERE o.order_date >= ? AND o.notified_at IS NULL
+            ORDER BY o.id ASC
+            """,
+            (cutoff,),
+        ).fetchall()
+
+        if new_rows:
+            cur.execute(
+                f"UPDATE orders SET notified_at = ? WHERE id IN ({','.join('?' * len(new_rows))})",
+                (now_iso(), *[r["id"] for r in new_rows]),
+            )
+            con.commit()
+
+        total_today = cur.execute(
+            "SELECT COUNT(*) AS cnt FROM orders WHERE order_date LIKE ?",
+            (f"{today}%",),
+        ).fetchone()["cnt"]
+
+    orders = [
+        {
+            "id": r["id"],
+            "customer_name": r["customer_name"],
+            "product_name": r["product_name"],
+            "amount": r["amount"],
+            "order_date": r["order_date"],
+        }
+        for r in new_rows
+    ]
+    return jsonify({"orders": orders, "total_orders_today": total_today})
 
 
 @app.route("/api/orders", methods=["POST"])
